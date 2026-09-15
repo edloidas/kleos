@@ -58,6 +58,8 @@ Local development runs on a local snapshot, so no GitHub token is needed and `.d
 
 The deployed site runs on a **scopeless token on purpose**: it can only reach public members, so people who hid their organization membership cannot be published by accident. Do not give the production token `read:org` — the narrower credential is the safeguard, not a limitation to work around. `loadContributions` also passes `publicOnly: true`, so the policy holds even if a broader token is configured by mistake.
 
+GraphQL will ask for that scope anyway, and the answer is no. `Organization.id` is gated behind `read:org` even for a fully public organization, so `fetchOrgId` reads the node ID from REST `/orgs/{org}`, which returns the same value with no scope at all. The failure it produces is `Your token has not been granted the required scopes … The 'id' field requires one of the following scopes: ['read:org']`, and it looks exactly like a token that needs widening. It is not. `contributionsCollection(organizationID:)` itself is not gated this way, so the rest of the query is fine on a scopeless token.
+
 A statically imported fixture is compiled into the Worker bundle, so a `--full` snapshot on a developer's machine would ship those hidden members inside a laptop deploy. Building on Cloudflare from the repository avoids this entirely: the fixture is gitignored, so the build environment has none.
 
 ## Do not install `@types/node`

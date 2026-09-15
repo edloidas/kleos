@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  # Workflow actions are pinned by commit SHA so a moved tag cannot reach the
+  # Cloudflare deploy credential. Dependabot rewrites those pins, which is what
+  # keeps pinning from rotting into stale actions nobody dares touch.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore'
+    groups:
+      astro:
+        patterns:
+          - 'astro'
+          - '@astrojs/*'
+      cloudflare:
+        patterns:
+          - 'wrangler'
+          - '@cloudflare/*'
+    ignore:
+      # astro check cannot run on the 7.x native compiler; see CLAUDE.md.
+      - dependency-name: 'typescript'
+        versions: ['>=7']
