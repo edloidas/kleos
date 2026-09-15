@@ -1,0 +1,68 @@
+# kleos
+
+Contribution leaderboards for GitHub organizations. Astro 7 SSR on Cloudflare Workers, KV for cached boards, D1 for the waitlist.
+
+## Commands
+
+```bash
+pnpm run dev       # Astro dev server on :4321 (Node, bindings emulated)
+pnpm run preview   # build + wrangler dev on :8787 (real workerd — use before deploying)
+pnpm run check     # wrangler types + astro check
+pnpm run deploy    # build + publish
+```
+
+## Constraints
+
+- Package manager is pnpm, pinned to a single version by `packageManager` in `package.json`. Not bun, not npm.
+- Runtime: Cloudflare Workers (`workerd`), not Node. Web APIs only — no `fs`, no sockets, no long-lived process.
+- Server code is bundled, so npm packages are fine as long as they do not need Node built-ins.
+- Every route is SSR (`output: 'server'`); they all read bindings, so nothing prerenders.
+- Bindings come from `import { env } from 'cloudflare:workers'`. `Astro.locals.runtime` was removed in adapter v13 / Astro 6; the properties survive as throwing getters, so older examples fail at runtime rather than at build.
+- No linter is configured. `astro check` is the only checker, and it is the only one that understands `.astro`.
+
+## Architecture rules (target state)
+
+These describe where the interactive version is going. **None of it is built yet** — there is no island, no shader and no `pushState`; the period switcher is still plain links. Treat the list as the design to build toward, not a description of the code.
+
+- **Path segment is the server, query string is the island.** `/enonic` → `/acme` is a navigation and a fresh server render. `?period=year` is island state written back with `pushState` — no reload.
+- **One island, not many.** Islands are isolated hydration roots and cannot share state. All interactive state lives in a single island per page.
+- **Changing the organization navigates.** Rare and deliberate, so it is served by SSR and needs no client fetch. There is no data API and adding one needs a reason.
+- **Period, sorting and cards are local.** One SSR pass hands the island every period at once; nothing after first paint hits the server.
+- **Island props must be serializable.** They are JSON-encoded into an HTML attribute — no functions, class instances or nodes across that boundary.
+- **The shader canvas is `client:only`, outside the island,** and never re-renders. It shares the main thread with everything else, so animations stay on CSS transforms and `opacity`.
+
+## No token on disk
+
+Local development runs on a local snapshot, so no GitHub token is needed and `.dev.vars` stays empty.
+
+- `src/lib/source.ts` is the only branch: token set means live GitHub, token unset means `src/fixtures/boards.json`.
+- `src/fixtures/boards.json` is **gitignored** — it holds named per-person counts and this repository is public. Every entry point (`dev`, `check`, `build`, `preview`, `deploy`) creates an empty `{}` if it is missing, so a fresh clone builds; the board is simply empty until it is filled.
+- `pnpm run snapshot <org>` refreshes the fixture. It borrows the token from the `gh` CLI keychain into process memory and never prints or writes it. Refreshing is always explicit: auto-snapshotting on every `dev` would break CI, slow every start and make local data non-deterministic.
+- The snapshot takes the **public roster by default**, matching what the deployed site sees. `--full` takes everything the token can reach; the fixture records which was used, and `build`, `preview` and `deploy` refuse a `--full` one so it cannot be compiled into a Worker.
+- Counts still differ from production: a `gh` token can see the organization's private repositories (46 of enonic's 237), so its numbers run higher. Set `GITHUB_TOKEN` to the scopeless production token when the snapshot has to match exactly.
+- The snapshot runs through the same `fetchContributions` the Worker uses, so the fixture cannot drift from a real response. Re-run it whenever the query shape changes.
+- Live data comes from `wrangler dev --remote` or a deploy. The production secret is set with `wrangler secret put`, piped from `op read`.
+
+## Roster size depends on token scope
+
+`fetchMemberLogins` asks for the full roster and falls back to public members when GitHub refuses. For enonic that is **18 members with `read:org` versus 9 public**.
+
+The deployed site runs on a **scopeless token on purpose**: it can only reach public members, so people who hid their organization membership cannot be published by accident. Do not give the production token `read:org` — the narrower credential is the safeguard, not a limitation to work around. `loadContributions` also passes `publicOnly: true`, so the policy holds even if a broader token is configured by mistake.
+
+A statically imported fixture is compiled into the Worker bundle, so a `--full` snapshot on a developer's machine would ship those hidden members inside a laptop deploy. Building on Cloudflare from the repository avoids this entirely: the fixture is gitignored, so the build environment has none.
+
+## Do not install `@types/node`
+
+Wrangler suggests it on every run. Declining is deliberate: `tsconfig.json` narrows `types` to `worker-configuration.d.ts`, so `astro check` rejects `node:fs`, `node:buffer` and `process` before anything is built. Installing it puts those globals back, the check goes quiet, and the code still breaks on the edge.
+
+`scripts/` is excluded from `tsconfig.json` for the same reason: those are real Node scripts, and the alternative was installing the types that hold the gate open.
+
+## GitHub
+
+This repository has no GitHub Project board. Skip project lookup and status updates entirely rather than searching for one.
+
+## Conventions
+
+- All user-facing text and code comments in English.
+- Conventional commits, as in the global config.
+- Secrets live in `.dev.vars` locally and `wrangler secret put` in production — never in `wrangler.jsonc`.

@@ -1,0 +1,77 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Glory won by deeds — contribution leaderboards for GitHub organizations.' } = Astro.props;
+
+// Query strings pick a period, not a document, so they stay out of the canonical.
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+const socialImage = new URL('/favicon-512.png', canonical);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0b0a" />
+    <meta name="color-scheme" content="dark" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta
+      name="robots"
+      content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="kleos" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="kleos" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="kleos mark" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="kleos mark" />
+  </head>
+  <body class="min-h-dvh">
+    <div class="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 py-10">
+      <header class="mb-10">
+        <a href="/" class="font-display text-2xl tracking-wide text-laurel">kleos</a>
+        <p class="mt-1 text-sm text-muted">Glory won by deeds.</p>
+      </header>
+
+      <main class="flex-1">
+        <slot />
+      </main>
+
+      <footer class="mt-16 border-t border-line pt-6 text-xs text-muted">
+        <p>
+          Counts come from the GitHub API and are cached for a few hours. Public contributions only.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kleos",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-09-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Organizations the leaderboard is enabled for. Anything else lands on the waitlist.
+    "SUPPORTED_ORGS": "enonic"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "<run: wrangler kv namespace create CACHE>"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kleos",
+      "database_id": "<run: wrangler d1 create kleos>"
+    }
+  ]
+}

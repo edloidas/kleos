@@ -1,0 +1,5 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+#
+# A personal access token with no scopes is enough for public data.
+# The GitHub GraphQL API refuses every request without one.
+GITHUB_TOKEN=""
