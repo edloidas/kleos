@@ -3,8 +3,21 @@
 # Skip with `git commit --no-verify`.
 set -e
 
-pnpm exec nano-staged
+# Hooks inherit a reduced PATH — a GUI client or editor often has no pnpm on it,
+# even when an interactive shell does. corepack ships with Node and reads the
+# pinned packageManager, so it resolves the same version either way.
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm='pnpm'
+elif command -v corepack >/dev/null 2>&1; then
+  pnpm='corepack pnpm'
+else
+  echo 'pre-commit: no pnpm and no corepack on PATH.' >&2
+  echo 'Run `corepack enable pnpm`, or skip once with `git commit --no-verify`.' >&2
+  exit 1
+fi
+
+$pnpm exec nano-staged
 
 # astro check is the only checker this repository has, and it is whole-project:
 # it reads the working tree, not the staged content.
-pnpm run check
+$pnpm run check

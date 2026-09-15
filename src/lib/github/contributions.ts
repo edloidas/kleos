@@ -27,7 +27,7 @@ export type Contributions = Counts & {
 /** GraphQL aliases let one request carry many users; 20 keeps the query well under the cost limit. */
 const BATCH_SIZE = 20;
 
-type OrgResponse = { organization: { id: string } | null };
+type OrgResponse = { node_id: string };
 
 type Collection = {
   totalCommitContributions: number;
@@ -88,14 +88,23 @@ async function paginate(token: string, path: string): Promise<string[]> {
   }
 }
 
+/**
+ * REST rather than GraphQL: GraphQL gates `Organization.id` behind `read:org`
+ * even for a public organization, and the production token must never hold that
+ * scope. REST returns the same global node ID with no scope at all.
+ */
 export async function fetchOrgId(token: string, org: string): Promise<string | null> {
-  const data = await graphql<OrgResponse>(
-    token,
-    `query ($org: String!) { organization(login: $org) { id } }`,
-    { org },
-  );
+  try {
+    const data = await rest<OrgResponse>(token, `/orgs/${encodeURIComponent(org)}`);
 
-  return data.organization?.id ?? null;
+    return data.node_id ?? null;
+  } catch (cause) {
+    if (cause instanceof GitHubError && cause.status === 404) {
+      return null;
+    }
+
+    throw cause;
+  }
 }
 
 export async function fetchContributions(
