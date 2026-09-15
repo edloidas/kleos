@@ -1,2 +1,58 @@
-# kleos
-Glory won by deeds — contribution leaderboards for GitHub organizations, ranked by commits, pull requests and reviews.
+<p align="center">
+  <img src="public/favicon-192.png" width="96" alt="kleos logo">
+</p>
+
+<h1 align="center">kleos</h1>
+
+<p align="center">
+Contribution leaderboards for GitHub organizations, ranked by pull requests, reviews, issues and commits.
+</p>
+
+Enter an organization, get its members ranked over the last week, month or year. `kleos` (κλέος) is the Homeric idea that renown is not something you claim but something others recount from your deeds — which is all this does: it reads the public record and reads it back.
+
+Astro with a React island, server-rendered on Cloudflare Workers.
+
+## Setup
+
+Requires Node 22.19+ and pnpm (`corepack enable pnpm` — the exact version is pinned in `package.json`).
+
+```bash
+pnpm install
+pnpm run snapshot enonic   # writes src/fixtures/boards.json using your `gh` login
+pnpm run dev
+```
+
+No token is needed locally: with the token unset, the app serves that snapshot. It is gitignored, so a fresh clone starts with an empty board until you run the snapshot command. The script borrows a credential from the `gh` CLI keychain for the length of one process and never writes it anywhere.
+
+A token is only needed in production, because GitHub's GraphQL API rejects unauthenticated requests outright.
+
+## Commands
+
+```bash
+pnpm run dev       # dev server on :4321
+pnpm run check     # type-check
+pnpm run preview   # build, then serve through the real Workers runtime
+pnpm run deploy    # build and publish
+```
+
+`preview` is the honest one: `dev` emulates the Cloudflare bindings, `preview` runs the same `workerd` that production does.
+
+## Scoring
+
+```
+score = 5×PR + 3×review + 2×issue + 1×commit
+```
+
+The weights live in `src/lib/score.ts` and are printed under the table on purpose. An opaque ranking of people reads as a judgement; a published formula reads as a game, which is what this is.
+
+## Known limits
+
+- **Public members only.** The deployed site authenticates with a scopeless token, so it sees only members who made their organization membership public — for `enonic`, 9 of 18. This is deliberate: the narrow credential is what keeps hidden members from being published.
+- **Public contributions only.** Work in private repositories cannot be attributed to a person.
+- **Allowlisted organizations.** Every visitor spends the same shared token's rate limit, so only approved organizations resolve. Everything else lands on the waitlist form.
+
+Signing in with GitHub would show a viewer their own contributions across all of GitHub, the organizations they belong to, and their standing in each — through their own access, so nobody else is exposed by it. Not built yet.
+
+## License
+
+MIT

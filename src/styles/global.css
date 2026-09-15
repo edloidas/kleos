@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #0d0b0a;
+  --color-surface: #16120f;
+  --color-line: #2c241d;
+  --color-parchment: #f3ece0;
+  --color-muted: #a2937f;
+  --color-laurel: #c9a227;
+
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-parchment);
+}

@@ -1,0 +1,35 @@
+---
+interface Props {
+  org: string;
+  requested?: boolean;
+}
+
+const { org, requested = false } = Astro.props;
+---
+
+<section class="max-w-prose">
+  {requested && <p class="mb-6 text-sm text-laurel">Thanks — we will let you know.</p>}
+
+  <h2 class="font-display text-2xl">Not enabled yet</h2>
+  <p class="mt-2 text-muted">
+    <strong class="text-parchment">{org}</strong> is not on the list. Leave an email and we will tell
+    you when it is.
+  </p>
+
+  <form method="post" action="/api/waitlist" class="mt-6 flex gap-2">
+    <input type="hidden" name="org" value={org} />
+    <input
+      type="email"
+      name="email"
+      placeholder="you@example.com"
+      required
+      class="flex-1 rounded-md border border-line bg-surface px-4 py-2 outline-none focus:border-laurel"
+    />
+    <button
+      type="submit"
+      class="rounded-md bg-laurel px-5 py-2 font-medium text-ink hover:opacity-90"
+    >
+      Notify me
+    </button>
+  </form>
+</section>

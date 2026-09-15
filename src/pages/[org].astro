@@ -1,0 +1,75 @@
+---
+import { Leaderboard } from '../components/Leaderboard';
+import Waitlist from '../components/Waitlist.astro';
+import Base from '../layouts/Base.astro';
+import { getBoard } from '../lib/board';
+import { resolveViewer } from '../lib/github/token';
+import { isSupported } from '../lib/orgs';
+import { PERIODS, parsePeriod } from '../lib/periods';
+
+const org = Astro.params.org!;
+const period = parsePeriod(Astro.url.searchParams.get('period'));
+const supported = isSupported(org);
+const requested = Astro.url.searchParams.has('requested');
+
+// Unsupported organizations are not pages; without this every typo and every
+// /favicon.ico probe answers 200 with an indexable waitlist form. The redirect
+// after a waitlist signup lands here too, and a confirmation is a real page.
+if (!supported && !requested) {
+  Astro.response.status = 404;
+}
+
+let board = null;
+let error: string | null = null;
+
+if (supported) {
+  try {
+    board = await getBoard(resolveViewer(Astro.request), org, period);
+  } catch (cause) {
+    // The raw message carries rate-limit identifiers and internal exception text,
+    // so it goes to the log and the visitor gets a status they can act on.
+    console.error(`board failed for ${org}/${period}:`, cause);
+    error = 'Could not reach GitHub. Try again in a moment.';
+    Astro.response.status = 502;
+  }
+}
+---
+
+<Base
+  title={`${org} — kleos`}
+  description={`Who carried ${org}? Contributors ranked by pull requests, reviews, issues and commits.`}
+>
+  <h1 class="font-display text-4xl">{org}</h1>
+
+  {
+    supported && (
+      <nav class="mt-4 flex gap-2 text-sm">
+        {PERIODS.map((value) => (
+          <a
+            href={`/${org}?period=${value}`}
+            class:list={[
+              'rounded-md border px-3 py-1',
+              value === period ? 'border-laurel text-laurel' : 'border-line text-muted',
+            ]}
+          >
+            {value}
+          </a>
+        ))}
+      </nav>
+    )
+  }
+
+  <div class="mt-8">
+    {!supported && <Waitlist org={org} requested={requested} />}
+    {error && <p class="text-muted">{error}</p>}
+    {board && <Leaderboard members={board.members} />}
+  </div>
+
+  {
+    board && !board.live && (
+      <p class="mt-8 text-xs text-muted">
+        Snapshot data — no GitHub token in this environment.
+      </p>
+    )
+  }
+</Base>
