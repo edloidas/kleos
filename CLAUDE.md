@@ -11,8 +11,17 @@ pnpm run check     # wrangler types + astro check
 pnpm run deploy    # build + publish
 ```
 
+## CI and hooks
+
+- Pull requests run `.github/workflows/check.yml` (`check` then `build`). Pushes to `master` run `.github/workflows/deploy.yml`, which checks and then `pnpm run deploy` against the `production` environment.
+- The workflows use `pnpm exec wrangler` rather than `cloudflare/wrangler-action`, so CI deploys with the wrangler version the lockfile pins. Authentication is `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets.
+- `pnpm install` runs `prepare`, which sets `core.hooksPath` to `.githooks`. The pre-commit hook runs `nano-staged` (→ `scripts/guard-staged.mjs`, which refuses staged secrets and a force-added fixture) and then `pnpm run check`.
+- `astro check` reads the working tree, not the staged content, so the hook verifies what is on disk rather than what is being committed.
+
 ## Constraints
 
+- TypeScript stays on 6. The 7.x native compiler does not expose the programmatic API `astro check` relies on, and `@astrojs/check` peers on `^5 || ^6`. Re-test when Astro ships support; do not upgrade on the strength of the version number.
+- `wrangler deploy` does not read `wrangler.jsonc` directly. `astro build` generates `dist/server/wrangler.json` and writes `.wrangler/deploy/config.json` pointing wrangler at it, so an edit to `wrangler.jsonc` takes effect only after the next build. Every deploy path builds first for this reason; a bare `wrangler deploy` ships the previous build's bindings.
 - Package manager is pnpm, pinned to a single version by `packageManager` in `package.json`. Not bun, not npm.
 - Runtime: Cloudflare Workers (`workerd`), not Node. Web APIs only — no `fs`, no sockets, no long-lived process.
 - Server code is bundled, so npm packages are fine as long as they do not need Node built-ins.

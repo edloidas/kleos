@@ -37,6 +37,14 @@ pnpm run deploy    # build and publish
 
 `preview` is the honest one: `dev` emulates the Cloudflare bindings, `preview` runs the same `workerd` that production does.
 
+`pnpm install` points `core.hooksPath` at `.githooks`, so committing runs the staged-file guard and `pnpm run check` first. `git commit --no-verify` skips it.
+
+## Deployment
+
+Pushing to `master` deploys to <https://kleos.edloidas.io> through `.github/workflows/deploy.yml`. Pull requests run the same checks without deploying.
+
+Deploys happen on a runner rather than a laptop on purpose: `src/fixtures/boards.json` is gitignored, so the runner has no snapshot to compile into the bundle and production reads live GitHub through its `GITHUB_TOKEN` secret.
+
 ## Scoring
 
 ```

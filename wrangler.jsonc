@@ -4,6 +4,8 @@
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-09-15",
   "compatibility_flags": ["nodejs_compat"],
+  // Deploying creates the DNS record and certificate on the edloidas.io zone.
+  "routes": [{ "pattern": "kleos.edloidas.io", "custom_domain": true }],
   "observability": {
     "enabled": true
   },
@@ -14,14 +16,14 @@
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "<run: wrangler kv namespace create CACHE>"
+      "id": "db5b5ed5a080488793bea29be2cb45d1"
     }
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "kleos",
-      "database_id": "<run: wrangler d1 create kleos>"
+      "database_id": "5e5ff4b3-e6d3-4567-88e6-6b390dc83079"
     }
   ]
 }

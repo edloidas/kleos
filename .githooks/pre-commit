@@ -1,0 +1,10 @@
+#!/bin/sh
+# Enabled by the `prepare` script, which points core.hooksPath at this directory.
+# Skip with `git commit --no-verify`.
+set -e
+
+pnpm exec nano-staged
+
+# astro check is the only checker this repository has, and it is whole-project:
+# it reads the working tree, not the staged content.
+pnpm run check
