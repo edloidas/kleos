@@ -9,8 +9,9 @@
  * higher than the deployed site's. Pass the same scopeless token production uses
  * through GITHUB_TOKEN for a snapshot that matches exactly.
  *
- * The snapshot goes through the same `fetchContributions` the deployed Worker
- * uses, so the fixture cannot drift from the shape of a real response.
+ * The snapshot goes through the same `fetchRoster` and `fetchCounts` the deployed
+ * Worker uses, over the same ISO weeks, so the fixture cannot drift from the shape
+ * of a real response.
  *
  * Defaults to the public roster, which is what the deployed site sees, so local
  * data matches the demo. `--full` uses every member the token can reach.
@@ -23,8 +24,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { fetchContributions, fetchCounts, fetchRoster } from '../src/lib/github/contributions';
-import { PERIODS, periodRange } from '../src/lib/periods';
+import { fetchCounts, fetchRoster } from '../src/lib/github/contributions';
 import {
   fetchRange,
   hasCompletedDay,
@@ -90,14 +90,6 @@ for (const org of orgs) {
   const key = org.toLowerCase();
   fixture.orgs[key] = {};
 
-  for (const period of PERIODS) {
-    const members = await fetchContributions(token, org, periodRange(period), publicOnly);
-    fixture.orgs[key][period] = members;
-    console.log(
-      `${key}/${period}: ${members.length} members${publicOnly ? ' (public)' : ' (FULL ROSTER)'}`,
-    );
-  }
-
   // One roster for every round, as the Worker does: the weeks differ only by range.
   const roster = await fetchRoster(token, org, publicOnly);
 
@@ -111,7 +103,9 @@ for (const org of orgs) {
   for (const week of season) {
     const members = await fetchCounts(token, roster, fetchRange(week, now));
     weeks[week] = members;
-    console.log(`${key}/${week}: ${members.length} members`);
+    console.log(
+      `${key}/${week}: ${members.length} members${publicOnly ? ' (public)' : ' (FULL ROSTER)'}`,
+    );
   }
 
   fixture.orgs[key].weeks = weeks;

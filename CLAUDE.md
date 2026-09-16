@@ -56,19 +56,19 @@ These describe where the interactive version is going. **None of it is built yet
 
 Local development runs on a local snapshot, so no GitHub token is needed and `.dev.vars` stays empty.
 
-- `src/lib/source.ts` is the only branch: token set means live GitHub, token unset means `src/fixtures/boards.json`.
+- `getBoard` is the only branch: token set means `loadSeason` against live GitHub, token unset means `loadSeasonFixture` over `src/fixtures/boards.json`.
 - `src/fixtures/boards.json` is **gitignored** — it holds named per-person counts and this repository is public. Every entry point (`dev`, `check`, `build`, `preview`, `deploy`) creates an empty `{}` if it is missing, so a fresh clone builds; the board is simply empty until it is filled.
 - `pnpm run snapshot <org>` refreshes the fixture. It borrows the token from the `gh` CLI keychain into process memory and never prints or writes it. Refreshing is always explicit: auto-snapshotting on every `dev` would break CI, slow every start and make local data non-deterministic.
 - The snapshot takes the **public roster by default**, matching what the deployed site sees. `--full` takes everything the token can reach; the fixture records which was used, and `build`, `preview` and `deploy` refuse a `--full` one so it cannot be compiled into a Worker.
 - Counts still differ from production: a `gh` token can see the organization's private repositories (46 of enonic's 237), so its numbers run higher. Set `GITHUB_TOKEN` to the scopeless production token when the snapshot has to match exactly.
-- The snapshot runs through the same `fetchContributions` the Worker uses, so the fixture cannot drift from a real response. Re-run it whenever the query shape changes.
+- The snapshot runs through the same `fetchRoster` and `fetchCounts` the Worker uses, over the same ISO weeks, so the fixture cannot drift from a real response. Re-run it whenever the query shape changes.
 - Live data comes from `wrangler dev --remote` or a deploy. The production secret is set with `wrangler secret put`, piped from `op read`.
 
 ## Roster size depends on token scope
 
 `fetchMemberLogins` asks for the full roster and falls back to public members when GitHub refuses. For enonic that is **18 members with `read:org` versus 9 public**.
 
-The deployed site runs on a **scopeless token on purpose**: it can only reach public members, so people who hid their organization membership cannot be published by accident. Do not give the production token `read:org` — the narrower credential is the safeguard, not a limitation to work around. `loadContributions` also passes `publicOnly: true`, so the policy holds even if a broader token is configured by mistake.
+The deployed site runs on a **scopeless token on purpose**: it can only reach public members, so people who hid their organization membership cannot be published by accident. Do not give the production token `read:org` — the narrower credential is the safeguard, not a limitation to work around. `loadSeason` also passes `publicOnly: true` to `fetchRoster`, so the policy holds even if a broader token is configured by mistake.
 
 GraphQL gates `Organization.id` behind `read:org` even for a public organization, so `fetchOrgId` reads the node ID from REST `/orgs/{org}` instead. The error names the scope and reads like a token that needs widening; it does not.
 
