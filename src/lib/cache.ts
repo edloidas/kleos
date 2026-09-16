@@ -86,3 +86,30 @@ export async function readAccount(name: string): Promise<string | null> {
 export async function writeAccount(name: string, value: string): Promise<void> {
   await env.CACHE.put(accountKey(name), value, { expirationTtl: ACCOUNT_TTL_SECONDS });
 }
+
+/** One key for the whole Worker, because the budget it describes is one budget. */
+const GATE_KEY = 'gate:lookup';
+
+export async function readLookupGate(): Promise<boolean> {
+  return (await env.CACHE.get(GATE_KEY, 'text')) !== null;
+}
+
+/**
+ * KV won't take an expiration under a minute away, and caches a read — a miss
+ * included — for about as long again, so a shorter gate may never reach the colo
+ * that wrote it. Doubling the floor clears both at once: overshooting costs a few
+ * needlessly precise answers, where undershooting silently keeps calling an API
+ * that already refused — which is what gets a token banned.
+ *
+ * A duration, not the instant itself: an instant computed a moment earlier is no
+ * longer a minute away by the time KV checks it.
+ */
+const MIN_GATE_SECONDS = 2 * MIN_EXPIRATION_SECONDS;
+
+export async function writeLookupGate(until: number): Promise<void> {
+  const seconds = until - Math.floor(Date.now() / 1000);
+
+  await env.CACHE.put(GATE_KEY, '1', {
+    expirationTtl: Math.max(seconds, MIN_GATE_SECONDS),
+  });
+}

@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchAccountType } from './account';
 import { GitHubError } from './client';
 
-function respond(status: number, body: unknown = {}): void {
+function respond(status: number, body: unknown = {}, headers: HeadersInit = {}): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => new Response(JSON.stringify(body), { status })),
+    vi.fn(async () => new Response(JSON.stringify(body), { status, headers })),
   );
 }
 
@@ -61,5 +61,46 @@ describe('fetchAccountType', () => {
         headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
       }),
     );
+  });
+});
+
+/**
+ * `Retry-After` is how a secondary limit names its wait, and it is the only wait
+ * such a refusal describes — so both forms the header allows have to arrive as
+ * seconds, or the caller backs off for a window GitHub never asked for.
+ */
+describe('the wait a refusal carries', () => {
+  it('reads the delay-seconds form', async () => {
+    respond(403, {}, { 'retry-after': '60' });
+
+    await expect(fetchAccountType('token', 'enonic')).rejects.toMatchObject({ retryAfter: 60 });
+  });
+
+  it('reads the HTTP-date form as the seconds until it', async () => {
+    respond(403, {}, { 'retry-after': new Date(Date.now() + 120_000).toUTCString() });
+
+    const cause = await fetchAccountType('token', 'enonic').catch((error: GitHubError) => error);
+
+    // The header carries whole seconds, so the instant it names rounds to 119 or 120.
+    expect(cause).toBeInstanceOf(GitHubError);
+    expect((cause as GitHubError).retryAfter).toBeGreaterThanOrEqual(119);
+    expect((cause as GitHubError).retryAfter).toBeLessThanOrEqual(120);
+  });
+
+  // A date already past asks for no wait at all, not a negative one.
+  it('never reads a wait as negative', async () => {
+    const past = new Date(Date.now() - 60_000).toUTCString();
+
+    respond(403, {}, { 'retry-after': past });
+
+    await expect(fetchAccountType('token', 'enonic')).rejects.toMatchObject({ retryAfter: 0 });
+  });
+
+  it('carries no wait when the header is absent', async () => {
+    respond(502);
+
+    await expect(fetchAccountType('token', 'enonic')).rejects.toMatchObject({
+      retryAfter: undefined,
+    });
   });
 });

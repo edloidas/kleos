@@ -19,6 +19,15 @@
       "id": "db5b5ed5a080488793bea29be2cb45d1"
     }
   ],
+  "ratelimits": [
+    {
+      // Uncached account lookups one visitor can force. `namespace_id` is just a
+      // name within this Worker and provisions nothing.
+      "name": "LOOKUP_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

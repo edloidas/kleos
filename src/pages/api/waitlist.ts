@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 
-import { resolveAccount } from '../../lib/account';
+import { lookupGateClosed, resolveAccount } from '../../lib/account';
 import { resolveViewer } from '../../lib/github/token';
+import { mayLookUp } from '../../lib/limit';
 import { isSupported } from '../../lib/orgs';
 import { waitlistFor, waitlistForAccount } from '../../lib/route';
 
@@ -38,8 +39,18 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return redirect(path, 303);
   }
 
+  // The same throttle the page applies, on the other path into the same lookup —
+  // a POST resolves a name as cheaply to script as a GET does. Recorded on the way
+  // through, because only this side knows it was the one refused.
   const viewer = resolveViewer(request);
-  const decision = waitlistForAccount(await resolveAccount(viewer, org), viewer !== null);
+  const refused = { throttle: false };
+  const account = await resolveAccount(viewer, org, async () => {
+    const allowed = await mayLookUp(request);
+    refused.throttle = !allowed;
+
+    return allowed;
+  });
+  const decision = waitlistForAccount(account, viewer !== null);
 
   if (decision === 'user') {
     return new Response(`${org} is a GitHub user, not an organization.`, { status: 422 });
@@ -49,8 +60,24 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return new Response(`GitHub has no organization called ${org}.`, { status: 422 });
   }
 
+  // Two of the three ways this lands never asked GitHub at all, and the difference
+  // is the wait: a throttle clears within the minute, a spent budget within the hour,
+  // and only the third is GitHub failing to answer.
   if (decision === 'unresolved') {
-    return new Response('Could not reach GitHub. Try again in a moment.', { status: 503 });
+    if (refused.throttle) {
+      return new Response('Too many lookups from here. Try again in a minute.', { status: 429 });
+    }
+
+    // The gate does not record which refusal set it, so the wait is given as the
+    // bound that holds for both rather than as the hour only one of them needs.
+    return (await lookupGateClosed())
+      ? new Response(
+          'kleos has paused GitHub lookups while it is rate limited. Try again within the hour.',
+          {
+            status: 503,
+          },
+        )
+      : new Response('Could not reach GitHub. Try again in a moment.', { status: 503 });
   }
 
   await env.DB.prepare('INSERT OR IGNORE INTO waitlist (org, email) VALUES (?, ?)')

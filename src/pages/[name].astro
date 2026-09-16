@@ -7,6 +7,7 @@ import { resolveAccount } from '../lib/account';
 import { getBoard } from '../lib/board';
 import { GitHubError } from '../lib/github/client';
 import { resolveViewer } from '../lib/github/token';
+import { mayLookUp } from '../lib/limit';
 import { excludedLogins, isSupported } from '../lib/orgs';
 import { MAX_MEMBERS, MIN_MEMBERS } from '../lib/roster';
 import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, START_RATING } from '../lib/rating';
@@ -22,7 +23,12 @@ const viewer = resolveViewer(Astro.request);
 // Only a well-formed, unlisted name reaches the lookup; `routeFor` settles
 // everything else without a request.
 const local = routeFor(name, isSupported(name), Astro.url.search);
-const route = local ?? routeForAccount(await resolveAccount(viewer, name), requested);
+const route =
+  local ??
+  routeForAccount(
+    await resolveAccount(viewer, name, () => mayLookUp(Astro.request)),
+    requested,
+  );
 
 if (route.kind === 'redirect') {
   return Astro.redirect(route.to, route.status);
