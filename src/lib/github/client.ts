@@ -20,10 +20,38 @@ export class GitHubError extends Error {
     message: string,
     readonly status: number,
     readonly rateLimited = false,
+    readonly reset?: number,
+    readonly retryAfter?: number,
   ) {
     super(message);
     this.name = 'GitHubError';
   }
+}
+
+/** What a response said about the budget it was drawn from; `reset` is unix seconds. */
+export type Budget = { remaining: number; reset: number };
+
+/** A caller that wants to watch the budget it is spending. */
+export type BudgetWatcher = (budget: Budget) => void;
+
+/**
+ * Read from every response, not only a refused one: a caller that waits for the
+ * refusal has already spent the budget it was trying to protect.
+ *
+ * GraphQL carries no such headers — it reports its own budget inside the response
+ * body — so this reads `null` there and only `rest` offers it.
+ */
+function readBudget(response: Response): Budget | null {
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  const reset = response.headers.get('x-ratelimit-reset');
+
+  if (remaining === null || reset === null) {
+    return null;
+  }
+
+  const budget = { remaining: Number(remaining), reset: Number(reset) };
+
+  return Number.isFinite(budget.remaining) && Number.isFinite(budget.reset) ? budget : null;
 }
 
 /**
@@ -37,6 +65,33 @@ function isRateLimited(response: Response): boolean {
     response.headers.get('x-ratelimit-remaining') === '0' ||
     (response.status === 403 && response.headers.has('retry-after'))
   );
+}
+
+/**
+ * The seconds a secondary limit asks to be left alone for, which is the only wait
+ * such a refusal describes: its budget is untouched, so `x-ratelimit-reset` names a
+ * window that has nothing to do with it and can be most of an hour away.
+ */
+function readRetryAfter(response: Response): number | undefined {
+  const header = response.headers.get('retry-after');
+
+  if (header === null) {
+    return undefined;
+  }
+
+  const seconds = Number(header);
+
+  if (Number.isFinite(seconds)) {
+    return Math.max(seconds, 0);
+  }
+
+  // The other form the header allows is an HTTP-date, which names the instant to
+  // resume at rather than a count of seconds to wait.
+  const deadline = Date.parse(header);
+
+  return Number.isNaN(deadline)
+    ? undefined
+    : Math.max(Math.round((deadline - Date.now()) / 1000), 0);
 }
 
 export async function graphql<T>(
@@ -83,7 +138,7 @@ export async function graphql<T>(
   return body.data;
 }
 
-export async function rest<T>(token: string, path: string): Promise<T> {
+export async function rest<T>(token: string, path: string, onBudget?: BudgetWatcher): Promise<T> {
   const response = await fetch(`https://api.github.com${path}`, {
     headers: {
       ...HEADERS,
@@ -93,11 +148,19 @@ export async function rest<T>(token: string, path: string): Promise<T> {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
+  const budget = readBudget(response);
+
+  if (budget) {
+    onBudget?.(budget);
+  }
+
   if (!response.ok) {
     throw new GitHubError(
       `GitHub REST ${path} responded ${response.status}`,
       response.status,
       isRateLimited(response),
+      budget?.reset,
+      readRetryAfter(response),
     );
   }
 

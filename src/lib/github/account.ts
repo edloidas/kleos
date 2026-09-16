@@ -1,3 +1,4 @@
+import type { BudgetWatcher } from './client';
 import { GitHubError, rest } from './client';
 
 /** The two kinds a GitHub login can be; the REST `type` field distinguishes them. */
@@ -10,9 +11,13 @@ type UserResponse = { type: string };
  * that. Every other failure is rethrown, so a spent budget or an outage is never
  * read as an absent account — the split `fetchOrgId` already makes.
  */
-export async function fetchAccountType(token: string, name: string): Promise<AccountType | null> {
+export async function fetchAccountType(
+  token: string,
+  name: string,
+  onBudget?: BudgetWatcher,
+): Promise<AccountType | null> {
   try {
-    const data = await rest<UserResponse>(token, `/users/${encodeURIComponent(name)}`);
+    const data = await rest<UserResponse>(token, `/users/${encodeURIComponent(name)}`, onBudget);
 
     return data.type === 'Organization' ? 'organization' : 'user';
   } catch (cause) {
