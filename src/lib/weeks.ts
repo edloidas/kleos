@@ -1,7 +1,7 @@
 /**
  * ISO weeks in UTC. The week is the ladder's round and the calendar month its
  * season, so everything here is arithmetic on whole UTC days — never a rolling
- * window like `periodRange`, and never local time.
+ * window, and never local time.
  *
  * Nothing in this module reaches for a binding, which is what lets the node test
  * project cover the cache's expiry math as well as the calendar.
