@@ -11,7 +11,7 @@
   },
   "vars": {
     // Organizations the leaderboard is enabled for. Anything else lands on the waitlist.
-    "SUPPORTED_ORGS": "enonic"
+    "SUPPORTED_ORGS": "enonic,enonic-playground"
   },
   "kv_namespaces": [
     {
