@@ -57,19 +57,19 @@ if (requestedOrg) {
       )
     }
   </div>
+
+  <script>
+    // The form has no server route of its own; it just navigates to /:org.
+    document.querySelector('[data-org-form]')?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input = (event.currentTarget as HTMLFormElement).elements.namedItem(
+        'org',
+      ) as HTMLInputElement;
+      const org = input.value.trim();
+
+      if (org) {
+        window.location.href = `/${encodeURIComponent(org)}`;
+      }
+    });
+  </script>
 </Base>
-
-<script>
-  // The form has no server route of its own; it just navigates to /:org.
-  document.querySelector('[data-org-form]')?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const input = (event.currentTarget as HTMLFormElement).elements.namedItem(
-      'org',
-    ) as HTMLInputElement;
-    const org = input.value.trim();
-
-    if (org) {
-      window.location.href = `/${encodeURIComponent(org)}`;
-    }
-  });
-</script>
