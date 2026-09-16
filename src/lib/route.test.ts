@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { routeFor, routeForAccount } from './route';
+import type { Account } from './account';
+import { routeFor, routeForAccount, waitlistFor, waitlistForAccount } from './route';
 
 describe('routeFor', () => {
   it('refuses a reserved segment before anything can ask GitHub', () => {
@@ -81,5 +82,102 @@ describe('routeForAccount', () => {
   it('does not let the signup parameter lift a refusal', () => {
     expect(routeForAccount('none', true)).toEqual({ kind: 'not-found', status: 404 });
     expect(routeForAccount('user', true)).toEqual({ kind: 'not-found', status: 404 });
+  });
+});
+
+describe('waitlistFor', () => {
+  it('refuses a reserved segment, as the page does', () => {
+    expect(waitlistFor('api', false)).toBe('malformed');
+  });
+
+  // Both look like logins and neither is one GitHub can issue.
+  it('refuses a name GitHub could not issue', () => {
+    expect(waitlistFor('foo--bar', false)).toBe('malformed');
+    expect(waitlistFor('trailing-', false)).toBe('malformed');
+  });
+
+  it('refuses an empty name', () => {
+    expect(waitlistFor('', false)).toBe('malformed');
+  });
+
+  it('refuses a name past the 39-character limit, and keeps the last legal one', () => {
+    expect(waitlistFor('a'.repeat(40), false)).toBe('malformed');
+    expect(waitlistFor('a'.repeat(39), false)).toBeNull();
+  });
+
+  // No row for a name that already has a board; the form is never rendered there.
+  it('answers enabled for an organization that is already served', () => {
+    expect(waitlistFor('enonic', true)).toBe('enabled');
+  });
+
+  it('leaves a well-formed unlisted name for the account lookup', () => {
+    expect(waitlistFor('edloidas', false)).toBeNull();
+  });
+
+  // `routeFor` would redirect these; there is nowhere to redirect a POST to.
+  it('reads casing as the page would after its redirect', () => {
+    expect(waitlistFor('Enonic', true)).toBe('enabled');
+    expect(waitlistFor('Edloidas', false)).toBeNull();
+  });
+});
+
+describe('waitlistForAccount', () => {
+  it('accepts an organization', () => {
+    expect(waitlistForAccount('organization', true)).toBe('accept');
+  });
+
+  // Without a token nothing resolves, so refusing would close the form locally.
+  it('accepts a name nobody was in a position to resolve', () => {
+    expect(waitlistForAccount('unknown', false)).toBe('accept');
+  });
+
+  // A spent rate limit answers `unknown` too, and accepting there would leave the
+  // gate open for the length of the window.
+  it('refuses a name the lookup was asked for and could not answer', () => {
+    expect(waitlistForAccount('unknown', true)).toBe('unresolved');
+  });
+
+  // The case the whole gate exists for.
+  it('refuses a user login', () => {
+    expect(waitlistForAccount('user', true)).toBe('user');
+  });
+
+  it('refuses a login GitHub does not have', () => {
+    expect(waitlistForAccount('none', true)).toBe('missing');
+  });
+});
+
+/**
+ * The gate is only worth having while the two agree: a form rendered where the
+ * POST refuses is a dead end, and a POST accepting where no form is rendered is
+ * how the table fills with junk. A failed lookup is the single deliberate
+ * divergence, and it answers 503 rather than dropping the submission silently.
+ */
+describe('the waitlist and the page', () => {
+  // Keyed rather than listed: a fifth `Account` fails to compile here until it is
+  // added, where a plain array would just never check it.
+  const ACCOUNTS = Object.keys({
+    organization: null,
+    user: null,
+    none: null,
+    unknown: null,
+  } satisfies Record<Account, null>) as Account[];
+
+  it('accept exactly the same accounts when nothing was asked', () => {
+    for (const account of ACCOUNTS) {
+      expect([account, waitlistForAccount(account, false) === 'accept']).toEqual([
+        account,
+        routeForAccount(account).kind === 'not-enabled',
+      ]);
+    }
+  });
+
+  it('diverge on nothing but a lookup that was asked and failed', () => {
+    for (const account of ACCOUNTS) {
+      expect([account, waitlistForAccount(account, true)]).toEqual([
+        account,
+        account === 'unknown' ? 'unresolved' : waitlistForAccount(account, false),
+      ]);
+    }
   });
 });

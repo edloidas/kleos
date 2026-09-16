@@ -67,7 +67,7 @@ The weights live in `src/lib/score.ts` and are printed under the table on purpos
 
 - **Public members only.** The deployed site authenticates with a scopeless token, so it sees only members who made their organization membership public — for `enonic`, 9 of 18. This is deliberate: the narrow credential is what keeps hidden members from being published.
 - **Public contributions only.** Work in private repositories cannot be attributed to a person.
-- **Allowlisted organizations.** Every visitor spends the same shared token's rate limit, so only approved organizations resolve. Everything else lands on the waitlist form.
+- **Allowlisted organizations.** Every visitor spends the same shared token's rate limit, so only approved organizations resolve. Any other organization lands on the waitlist form; a personal login has no page yet, and cannot be waitlisted.
 
 Signing in with GitHub would show a viewer their own contributions across all of GitHub, the organizations they belong to, and their standing in each — through their own access, so nobody else is exposed by it. Not built yet.
 
