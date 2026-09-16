@@ -51,6 +51,7 @@ These describe where the interactive version is going. **None of it is built yet
 - **Period, sorting and cards are local.** One SSR pass hands the island every period at once; nothing after first paint hits the server.
 - **Island props must be serializable.** They are JSON-encoded into an HTML attribute — no functions, class instances or nodes across that boundary.
 - **The shader canvas is `client:only`, outside the island,** and never re-renders. It shares the main thread with everything else, so animations stay on CSS transforms and `opacity`.
+- **Decoration is fetched last or not at all.** The front-page mark is WebGL and costs 131 KB gzipped, so it is behind a dynamic import gated on idle, on visibility, and on the visitor having WebGL and asking for neither reduced motion nor reduced data. The static medallion is what the page renders; the badge is an upgrade a visitor may never receive, and nothing may depend on it having loaded.
 
 ## No token on disk
 
