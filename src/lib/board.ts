@@ -1,3 +1,4 @@
+import { withoutExcluded } from './exclusions';
 import type { Contributions } from './github/contributions';
 import type { Viewer } from './github/token';
 import type { Ladder, LadderEntry } from './rating';
@@ -89,6 +90,7 @@ export async function getBoard(
   viewer: Viewer | null,
   org: string,
   now = new Date(),
+  excluded: string[] = [],
 ): Promise<Board> {
   const week = liveWeek(now);
   const month = seasonMonth(now);
@@ -110,6 +112,12 @@ export async function getBoard(
 
     throw cause;
   }
+
+  // Ahead of the ladder, the identities and the member count, so an excluded
+  // member leaves no trace in any of them.
+  const fetched = rosterSize(rounds);
+
+  rounds = withoutExcluded(rounds, excluded);
 
   const monthRounds = only(rounds, monthWeeks);
   const table = ladder(monthRounds, now);
@@ -136,10 +144,24 @@ export async function getBoard(
     },
     members,
     // An empty snapshot is no roster at all rather than a small organization, so
-    // a tokenless render with nothing to count says nothing about the size.
-    limit: viewer || members > 0 ? sizeLimit(members) : null,
+    // a tokenless render with nothing to count says nothing about the size. What
+    // was fetched decides that, not what survives exclusion: a roster hidden down
+    // to nobody was still counted, and is not an absent snapshot.
+    limit: viewer || fetched > 0 ? servedLimit(fetched, members) : null,
     live: viewer !== null,
   };
+}
+
+/**
+ * The ceiling measures the roster fetched and the floor the roster published,
+ * because the two limits are there for different reasons: the fan-out is paid
+ * for everyone fetched whether or not they are shown, while two people are not a
+ * ladder to read. One number for both would also make the verdict depend on the
+ * cache — `loadSeason` refuses an oversized organization on the roster it just
+ * fetched, so a warm season would render what a cold one turns away.
+ */
+function servedLimit(fetched: number, published: number): SizeLimit | null {
+  return sizeLimit(fetched) === 'too-large' ? 'too-large' : sizeLimit(published);
 }
 
 /** First of the month the instant falls in, UTC. */

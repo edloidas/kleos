@@ -3,3 +3,7 @@
 # A personal access token with no scopes is enough for public data.
 # The GitHub GraphQL API refuses every request without one.
 GITHUB_TOKEN=""
+
+# Logins never shown on a board, comma separated and case insensitive.
+# Set in production with `wrangler secret put EXCLUDED_LOGINS`.
+EXCLUDED_LOGINS=""
