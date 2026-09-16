@@ -22,6 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { fetchContributions } from '../src/lib/github/contributions';
 import { PERIODS } from '../src/lib/periods';
 
@@ -35,7 +36,10 @@ function githubToken(): string {
   }
 
   try {
-    return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return execFileSync('gh', ['auth', 'token'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
   } catch {
     throw new Error('Could not read a token from `gh`. Run `gh auth login` first.');
   }

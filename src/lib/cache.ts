@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers';
+
 import type { Period } from './periods';
 
 const TTL_SECONDS = 6 * 60 * 60;
