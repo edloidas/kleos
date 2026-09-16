@@ -10,7 +10,9 @@ export default defineConfig({
   output: 'server',
   // Nothing uses sessions; leaving them on makes the adapter ask for a KV namespace.
   session: false,
-  adapter: cloudflare(),
+  // The app transforms no images, and the default binding publishes a billable
+  // /_image transform endpoint that anyone can call.
+  adapter: cloudflare({ imageService: 'passthrough' }),
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
