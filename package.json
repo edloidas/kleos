@@ -30,7 +30,8 @@
     "db:local": "wrangler d1 execute kleos --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute kleos --remote --file=./schema.sql",
     "snapshot": "tsx scripts/snapshot.ts",
-    "fixture": "node scripts/ensure-fixture.mjs"
+    "fixture": "node scripts/ensure-fixture.mjs",
+    "clean": "node scripts/clean-dev.mjs"
   },
   "nano-staged": {
     "*": "node scripts/guard-staged.mjs",

@@ -17,7 +17,16 @@ pnpm run lint      # oxlint --fix
 pnpm run test      # both vitest projects
 pnpm run test:unit # the node project only
 pnpm run deploy    # build + publish
+pnpm run clean     # stop the dev daemon, kill stray workerd, drop the vite cache
 ```
+
+## The dev server is a daemon
+
+- `astro dev` detaches and outlives its terminal. Use `astro dev stop`, `astro dev status` and `astro dev logs`; check status rather than assuming 4321 is free.
+- `pnpm run preview` ends in a foreground `wrangler dev`. Force-quitting the terminal orphans wrangler and its workerd children on the inspector port, and the next `dev` warns `Default inspector port 9229 not available, using 9230 instead` — one port up per orphan. Killing the wrangler parent is not enough: a workerd child reparents, so sweep twice.
+- `The file does not exist at ".../deps_ssr/server-<hash>.js?v=<hash>"` is a stale optimizer cache, not an incompatible dependency — `optimizeDeps.exclude`, which the message suggests, is the wrong fix. `node_modules/.vite` is shared by `deps`, `deps_astro`, `deps_ssr` and `vitest`, so a build, preview or test run re-hashes the SSR chunks under a live daemon and its module graph then asks for a chunk that is gone.
+- A cold or re-optimized cache reloads during startup and the runner dies on that reload, so the first `dev` after one fails every time and the second succeeds. `pnpm run check` re-optimizes, so a `dev` straight after it is one of those first runs.
+- `pnpm run clean` covers all of it: stop the daemon, kill wrangler/workerd orphans (matched by ppid and path, not by port — 9229 is also node's `--inspect` default), drop `node_modules/.vite`, then spend the throwaway first run so `dev` starts clean.
 
 ## CI and hooks
 
