@@ -76,12 +76,8 @@ function rimMaterial(): MeshPhysicalMaterial {
 }
 
 /**
- * The coin itself: two domed faces and the band between them, built from the art.
- *
- * The handle is returned synchronously although the images are not loaded yet, so a
- * caller that gives up mid-load still has something to call `dispose` on. Disposal
- * during the load cancels the build rather than letting it attach meshes to a group
- * nobody is holding any more.
+ * The handle comes back before the images have loaded, so a caller that gives up
+ * mid-load still has something to call `dispose` on; disposing then cancels the build.
  */
 export function createShieldModel(options: ShieldModelOptions): ShieldModel {
   const group = new Group();
@@ -119,9 +115,6 @@ export function createShieldModel(options: ShieldModelOptions): ShieldModel {
         new Mesh(back.geometry, backSurface.material),
         new Mesh(rim, band),
       );
-
-      // Disposed while the meshes were being built: tear them down again.
-      if (disposed) disposeOwned();
     },
   );
 

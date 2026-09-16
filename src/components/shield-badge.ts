@@ -16,32 +16,14 @@ import {
 } from 'three';
 import type { Texture } from 'three';
 
+import type { ArtworkOptions } from './shield/artwork';
+import type { ShapeOptions } from './shield/geometry';
 import { createShieldModel } from './shield/model';
 import { createShieldMotion } from './shield/motion';
 
-export interface ShieldBadgeOptions {
+export interface ShieldBadgeOptions extends Partial<ArtworkOptions>, Partial<ShapeOptions> {
   front: string;
   back: string;
-  /** Texture sample resolution. */
-  size?: number;
-  /** Radial resolution of the face mesh; derived from the rendered size when omitted. */
-  rings?: number;
-  /** Angular resolution; derived from the rendered size when omitted. */
-  segments?: number;
-  /** Half-thickness at the rim. */
-  thickness?: number;
-  /** How much the face bulges. */
-  dome?: number;
-  /** How high the gold is raised over the enamel. */
-  relief?: number;
-  /** How deep the back is hollowed; the shell follows the front dome. */
-  concave?: number;
-  /** How far the back handle stands off the hollow. */
-  handleLift?: number;
-  /** 0 is a flat slab, 1 a strap that arches between its rivets. */
-  handleArch?: number;
-  /** How round the edge band is. */
-  rimBulge?: number;
   /** Idle spin, rad/s. */
   autoSpeed?: number;
   autoSpin?: boolean;
@@ -60,13 +42,11 @@ export interface ShieldBadge {
 // r155 dropped the legacy light units; punctual lights need π to keep the r128 look.
 const LEGACY_LIGHT_SCALE = Math.PI;
 
-/** A tap rather than a drag: barely moved, and let go quickly. */
 const TAP_PX = 5;
 const TAP_MS = 350;
 
-// Mesh detail from the drawn radius in device pixels. A 176px badge at DPR 2 gets
-// about 65 rings and 104 segments, which is a segment every 1.4 drawn pixels — past
-// that the extra vertices cost mobile a visible pause and change nothing on screen.
+// Past roughly a segment per drawn pixel the extra vertices cost mobile a visible
+// pause and change nothing on screen, which is what the caps are for.
 function detailFor(container: HTMLElement, pixelRatio: number) {
   const radiusPx =
     (Math.min(container.clientWidth, container.clientHeight) * pixelRatio * 0.82) / 2;
@@ -125,10 +105,7 @@ function buildEnvironment(renderer: WebGLRenderer): Texture {
   return texture;
 }
 
-/**
- * Owns the canvas and the clock. The coin it turns is `./shield/model`, the physics
- * are `./shield/motion`, and this is what connects the two to a pointer and a frame.
- */
+/** Owns the canvas and the clock; the coin and its physics are `./shield/*`. */
 export function createShieldBadge(
   container: HTMLElement,
   options: ShieldBadgeOptions,
@@ -268,8 +245,7 @@ export function createShieldBadge(
     o.onFrame?.({ angle: pose.angle, bob: pose.bob });
     renderer.render(scene, camera);
 
-    // Nothing left to animate, so the loop ends rather than redrawing an identical
-    // frame forever. Any interaction calls start() again.
+    // Ends rather than redrawing an identical frame; any interaction calls start().
     if (pose.settled) {
       raf = 0;
       return;
