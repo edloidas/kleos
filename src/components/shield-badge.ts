@@ -477,6 +477,7 @@ export function createShieldBadge(
     state.vel = 0;
     state.settleStep = Math.PI;
     el.setPointerCapture(e.pointerId);
+    start();
   };
   const onMove = (e: PointerEvent) => {
     const rect = el.getBoundingClientRect();
@@ -488,6 +489,7 @@ export function createShieldBadge(
     state.angle += d;
     state.vel = state.vel * 0.6 + (d / (1 / 60)) * 0.4;
     state.lastInteract = performance.now();
+    start();
   };
   const onUp = (e: PointerEvent) => {
     if (!state.dragging) return;
@@ -503,6 +505,7 @@ export function createShieldBadge(
   };
   const onLeave = () => {
     state.tiltTarget = 0;
+    start();
   };
   el.addEventListener('pointerdown', onDown);
   el.addEventListener('pointermove', onMove);
@@ -521,6 +524,7 @@ export function createShieldBadge(
       state.settleStep = Math.PI;
       state.lastInteract = -1e9;
     }
+    start();
   }
 
   const resize = () => {
@@ -573,6 +577,15 @@ export function createShieldBadge(
 
     o.onFrame?.({ angle: state.angle, bob: group.position.y });
     renderer.render(scene, camera);
+
+    // Under reduced motion the coin holds still once it has settled, so the loop
+    // ends rather than redrawing an identical frame forever. Any interaction
+    // calls start() again.
+    if (reduceMotion.matches && !state.dragging && Math.abs(state.vel) < 0.01) {
+      raf = 0;
+      return;
+    }
+
     raf = requestAnimationFrame(frame);
   }
 
@@ -622,11 +635,13 @@ export function createShieldBadge(
     setAutoSpin(value) {
       state.autoSpin = value;
       state.lastInteract = value ? -1e9 : performance.now();
+      start();
     },
     toggleSpin,
     nudge(delta) {
       state.vel += delta;
       state.lastInteract = performance.now();
+      start();
     },
     dispose() {
       disposed = true;
