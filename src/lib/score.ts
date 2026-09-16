@@ -19,9 +19,6 @@ export const HALF_AT = {
   commits: 8,
 } as const;
 
-/** Part of the board cache key: a scoring change must not serve entries scored by the old rules. */
-export const FORMULA_VERSION = 'v2';
-
 export const CATEGORIES = ['pullRequests', 'reviews', 'issues', 'commits'] as const;
 
 export type Category = (typeof CATEGORIES)[number];

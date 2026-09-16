@@ -1,14 +1,19 @@
 ---
-import { Leaderboard } from '../components/Leaderboard';
+import { MonthLadder } from '../components/MonthLadder';
 import Waitlist from '../components/Waitlist.astro';
+import { WeekStandings } from '../components/WeekStandings';
 import Base from '../layouts/Base.astro';
 import { getBoard } from '../lib/board';
+import { GitHubError } from '../lib/github/client';
 import { resolveViewer } from '../lib/github/token';
 import { isSupported } from '../lib/orgs';
-import { PERIODS, parsePeriod } from '../lib/periods';
+import { MAX_MEMBERS, MIN_MEMBERS } from '../lib/roster';
+import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, START_RATING } from '../lib/rating';
+import { HALF_AT, WEIGHTS } from '../lib/score';
+import { VIEWS, parseView } from '../lib/views';
 
 const org = Astro.params.org!;
-const period = parsePeriod(Astro.url.searchParams.get('period'));
+const view = parseView(Astro.url.searchParams.get('period'));
 const supported = isSupported(org);
 const requested = Astro.url.searchParams.has('requested');
 
@@ -24,15 +29,27 @@ let error: string | null = null;
 
 if (supported) {
   try {
-    board = await getBoard(resolveViewer(Astro.request), org, period);
+    board = await getBoard(resolveViewer(Astro.request), org);
   } catch (cause) {
     // The raw message carries rate-limit identifiers and internal exception text,
     // so it goes to the log and the visitor gets a status they can act on.
-    console.error(`board failed for ${org}/${period}:`, cause);
-    error = 'Could not reach GitHub. Try again in a moment.';
-    Astro.response.status = 502;
+    console.error(`board failed for ${org}/${view}:`, cause);
+
+    const limited = cause instanceof GitHubError && cause.rateLimited;
+
+    error = limited
+      ? 'kleos is over its GitHub rate limit right now. The board comes back within the hour.'
+      : 'Could not reach GitHub. Try again in a moment.';
+    Astro.response.status = limited ? 503 : 502;
   }
 }
+
+const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const monthName = new Intl.DateTimeFormat('en-GB', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 ---
 
 <Base
@@ -44,12 +61,12 @@ if (supported) {
   {
     supported && (
       <nav class="mt-4 flex gap-2 text-sm">
-        {PERIODS.map((value) => (
+        {VIEWS.map((value) => (
           <a
             href={`/${org}?period=${value}`}
             class:list={[
               'rounded-md border px-3 py-1',
-              value === period ? 'border-laurel text-laurel' : 'border-line text-muted',
+              value === view ? 'border-laurel text-laurel' : 'border-line text-muted',
             ]}
           >
             {value}
@@ -62,14 +79,89 @@ if (supported) {
   <div class="mt-8">
     {!supported && <Waitlist org={org} requested={requested} />}
     {error && <p class="text-muted">{error}</p>}
-    {board && <Leaderboard members={board.members} />}
+
+    {
+      board?.limit === 'too-small' && (
+        <p class="text-muted">
+          {org} has {board.members} public {board.members === 1 ? 'member' : 'members'}. A ladder
+          needs at least {MIN_MEMBERS}.
+        </p>
+      )
+    }
+
+    {
+      board?.limit === 'too-large' && (
+        <p class="text-muted">
+          {org} has {board.members} public members, more than the {MAX_MEMBERS} a board is served
+          for.
+        </p>
+      )
+    }
+
+    {
+      board && !board.limit && view === 'week' && (
+        <div class="space-y-4">
+          <h2 class="font-display text-2xl">
+            Week {board.week.number}{' '}
+            <span class="text-muted">
+              ({day.format(new Date(board.week.from))} – {day.format(new Date(board.week.to))})
+            </span>
+          </h2>
+          <p class="text-sm text-muted">
+            Counts run through {day.format(new Date(board.week.through))}
+            {board.week.complete ? ', the last day of the round' : ' — the round is still running'}.
+          </p>
+          <WeekStandings standings={board.week.standings} />
+        </div>
+      )
+    }
+
+    {
+      board && !board.limit && view === 'month' && (
+        <div class="space-y-4">
+          <h2 class="font-display text-2xl">
+            {monthName.format(new Date(board.month.start))}{' '}
+            <span class="text-sm text-muted">formula {LADDER_VERSION}</span>
+          </h2>
+          <p class="text-sm text-muted">
+            {board.month.rounds} {board.month.rounds === 1 ? 'round' : 'rounds'} played.
+            {board.month.provisionalRound && ' Ratings include this week so far.'}
+          </p>
+          <MonthLadder month={board.month} />
+        </div>
+      )
+    }
   </div>
 
   {
+    board && !board.limit && (
+      <div class="mt-16 space-y-2 border-t border-line pt-6 text-xs text-muted">
+        <p>
+          Weekly points = sum of weight × n / (n + k), over PRs ({WEIGHTS.pullRequests}/
+          {HALF_AT.pullRequests}), reviews ({WEIGHTS.reviews}/{HALF_AT.reviews}), issues (
+          {WEIGHTS.issues}/{HALF_AT.issues}) and commits ({WEIGHTS.commits}/{HALF_AT.commits}). Each
+          category maxes out at its weight and reaches half of it at k.
+        </p>
+        <p>
+          Rating moves by {K_FACTOR} × (expected place − actual place) / (players − 1), so finishing
+          above the place your rating predicts gains you points, and {MIN_ROUNDS} rounds are needed
+          to be ranked.
+        </p>
+        <p>
+          A season is a calendar month whose rounds are the ISO weeks with a Thursday inside it, and
+          every rating resets to {START_RATING} when one starts.
+        </p>
+        <p>
+          Only members who have made their organization membership public are listed, and only their
+          public contributions are counted.
+        </p>
+      </div>
+    )
+  }
+
+  {
     board && !board.live && (
-      <p class="mt-8 text-xs text-muted">
-        Snapshot data — no GitHub token in this environment.
-      </p>
+      <p class="mt-8 text-xs text-muted">Snapshot data — no GitHub token in this environment.</p>
     )
   }
 </Base>

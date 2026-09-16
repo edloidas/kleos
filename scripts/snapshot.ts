@@ -23,8 +23,17 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { fetchContributions } from '../src/lib/github/contributions';
+import { fetchContributions, fetchCounts, fetchRoster } from '../src/lib/github/contributions';
 import { PERIODS, periodRange } from '../src/lib/periods';
+import {
+  fetchRange,
+  hasCompletedDay,
+  lastCompletedInstant,
+  liveWeek,
+  seasonWeeks,
+  weekStartOf,
+  weekThursday,
+} from '../src/lib/weeks';
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/fixtures/boards.json');
 
@@ -62,6 +71,21 @@ const fixture = {
   orgs: {} as Record<string, Record<string, unknown>>,
 };
 
+/*
+ * Both seasons the page can ask for, deduplicated. Around a 1st that falls
+ * midweek the week view and the month view sit in different months, and a
+ * snapshot holding only one of them renders the other as empty rounds.
+ */
+const now = new Date();
+const rounds = (month: Date) => seasonWeeks(month).filter((week) => hasCompletedDay(week, now));
+const weekSeason = rounds(monthOf(weekThursday(weekStartOf(liveWeek(now)))));
+const monthSeason = rounds(monthOf(lastCompletedInstant(now)));
+const season = [...new Set([...monthSeason, ...weekSeason])].sort();
+
+function monthOf(instant: Date): Date {
+  return new Date(Date.UTC(instant.getUTCFullYear(), instant.getUTCMonth(), 1));
+}
+
 for (const org of orgs) {
   const key = org.toLowerCase();
   fixture.orgs[key] = {};
@@ -73,6 +97,24 @@ for (const org of orgs) {
       `${key}/${period}: ${members.length} members${publicOnly ? ' (public)' : ' (FULL ROSTER)'}`,
     );
   }
+
+  // One roster for every round, as the Worker does: the weeks differ only by range.
+  const roster = await fetchRoster(token, org, publicOnly);
+
+  if (!roster) {
+    console.error(`${key}: no such organization; weeks not taken`);
+    continue;
+  }
+
+  const weeks: Record<string, unknown> = {};
+
+  for (const week of season) {
+    const members = await fetchCounts(token, roster, fetchRange(week, now));
+    weeks[week] = members;
+    console.log(`${key}/${week}: ${members.length} members`);
+  }
+
+  fixture.orgs[key].weeks = weeks;
 }
 
 mkdirSync(dirname(OUT), { recursive: true });
