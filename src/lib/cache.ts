@@ -67,3 +67,22 @@ export async function writeWeek<T>(
 
   return true;
 }
+
+/** A login can be renamed or converted, so the type behind one is held for a day and no longer. */
+const ACCOUNT_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * No scope in the key, unlike the week entries: an account's type is public and
+ * reads the same for every viewer.
+ */
+function accountKey(name: string): string {
+  return `account:${name.toLowerCase()}`;
+}
+
+export async function readAccount(name: string): Promise<string | null> {
+  return await env.CACHE.get(accountKey(name), 'text');
+}
+
+export async function writeAccount(name: string, value: string): Promise<void> {
+  await env.CACHE.put(accountKey(name), value, { expirationTtl: ACCOUNT_TTL_SECONDS });
+}
