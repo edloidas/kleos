@@ -1,5 +1,3 @@
-import type { Period } from '../periods';
-import { periodRange } from '../periods';
 import { GitHubError, graphql, rest } from './client';
 
 export type Counts = {
@@ -107,20 +105,33 @@ export async function fetchOrgId(token: string, org: string): Promise<string | n
   }
 }
 
-export async function fetchContributions(
+/** The organization's node ID and roster: one REST pair, reusable across every week of a season. */
+export type Roster = { orgId: string; logins: string[] };
+
+export async function fetchRoster(
   token: string,
   org: string,
-  period: Period,
   publicOnly = false,
-): Promise<Contributions[]> {
+): Promise<Roster | null> {
   const orgId = await fetchOrgId(token, org);
 
   if (!orgId) {
-    return [];
+    return null;
   }
 
-  const logins = await fetchMemberLogins(token, org, publicOnly);
-  const { from, to } = periodRange(period);
+  return { orgId, logins: await fetchMemberLogins(token, org, publicOnly) };
+}
+
+/**
+ * The range is the caller's: a rolling period for the board, one ISO week for a
+ * ladder round. The query shape does not depend on it, so a per-week fetch and
+ * the snapshot still send the request `buildBatchQuery` has always built.
+ */
+export async function fetchCounts(
+  token: string,
+  { orgId, logins }: Roster,
+  { from, to }: { from: string; to: string },
+): Promise<Contributions[]> {
   const results: Contributions[] = [];
 
   for (let i = 0; i < logins.length; i += BATCH_SIZE) {
@@ -144,6 +155,17 @@ export async function fetchContributions(
   }
 
   return results;
+}
+
+export async function fetchContributions(
+  token: string,
+  org: string,
+  range: { from: string; to: string },
+  publicOnly = false,
+): Promise<Contributions[]> {
+  const roster = await fetchRoster(token, org, publicOnly);
+
+  return roster ? await fetchCounts(token, roster, range) : [];
 }
 
 function buildBatchQuery(size: number): string {

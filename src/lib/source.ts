@@ -3,6 +3,7 @@ import type { Contributions } from './github/contributions';
 import { fetchContributions } from './github/contributions';
 import type { Viewer } from './github/token';
 import type { Period } from './periods';
+import { periodRange } from './periods';
 
 type Fixture = {
   meta?: { roster: 'public' | 'full'; takenAt: string };
@@ -24,7 +25,7 @@ export async function loadContributions(
   period: Period,
 ): Promise<Contributions[]> {
   if (viewer) {
-    return await fetchContributions(viewer.token, org, period, true);
+    return await fetchContributions(viewer.token, org, periodRange(period), true);
   }
 
   return (fixture as Fixture).orgs?.[org.toLowerCase()]?.[period] ?? [];

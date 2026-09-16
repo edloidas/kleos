@@ -24,7 +24,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { fetchContributions } from '../src/lib/github/contributions';
-import { PERIODS } from '../src/lib/periods';
+import { PERIODS, periodRange } from '../src/lib/periods';
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/fixtures/boards.json');
 
@@ -67,7 +67,7 @@ for (const org of orgs) {
   fixture.orgs[key] = {};
 
   for (const period of PERIODS) {
-    const members = await fetchContributions(token, org, period, publicOnly);
+    const members = await fetchContributions(token, org, periodRange(period), publicOnly);
     fixture.orgs[key][period] = members;
     console.log(
       `${key}/${period}: ${members.length} members${publicOnly ? ' (public)' : ' (FULL ROSTER)'}`,
