@@ -34,17 +34,23 @@
   },
   "nano-staged": {
     "*": "node scripts/guard-staged.mjs",
-    "*.{ts,tsx}": ["oxfmt -c .oxfmtrc.json --write", "oxlint -c .oxlintrc.json"],
+    "*.{ts,tsx}": [
+      "oxfmt -c .oxfmtrc.json --write",
+      "oxlint -c .oxlintrc.json"
+    ],
     "*.astro": "oxlint -c .oxlintrc.json"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.1",
     "@astrojs/react": "^6.0.5",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/pt-serif": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
@@ -52,6 +58,7 @@
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.0.1",
     "nano-staged": "^1.0.2",

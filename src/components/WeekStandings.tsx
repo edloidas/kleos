@@ -46,10 +46,8 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
               <td className="py-2 pr-4 text-right">{member.reviews}</td>
               <td className="py-2 pr-4 text-right">{member.issues}</td>
               <td className="py-2 pr-4 text-right">{member.commits}</td>
-              <td className="py-2 pr-4 text-right text-laurel">{member.points.toFixed(2)}</td>
-              <td
-                className={`py-2 text-right ${member.delta >= 0 ? 'text-parchment' : 'text-muted'}`}
-              >
+              <td className="py-2 pr-4 text-right text-bronze">{member.points.toFixed(2)}</td>
+              <td className={`py-2 text-right ${member.delta >= 0 ? 'text-ink' : 'text-muted'}`}>
                 {delta(member.delta)}
               </td>
             </tr>

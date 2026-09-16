@@ -21,7 +21,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
             key={member.login}
             className="rounded-lg border border-line bg-surface p-4 text-center"
           >
-            <div className="font-display text-3xl text-laurel">{index + 1}</div>
+            <div className="font-display text-3xl text-bronze">{index + 1}</div>
             <img
               src={member.avatarUrl}
               alt=""
@@ -63,7 +63,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
                 <td className="py-2 pr-4 text-right">{member.reviews}</td>
                 <td className="py-2 pr-4 text-right">{member.issues}</td>
                 <td className="py-2 pr-4 text-right">{member.commits}</td>
-                <td className="py-2 text-right text-laurel">{member.score.toFixed(1)}</td>
+                <td className="py-2 text-right text-bronze">{member.score.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>

@@ -18,8 +18,8 @@ const socialImage = new URL('/favicon-512.png', canonical);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d0b0a" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#f5f4f1" />
+    <meta name="color-scheme" content="light" />
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -35,7 +35,7 @@ const socialImage = new URL('/favicon-512.png', canonical);
     <link rel="manifest" href="/site.webmanifest" />
 
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="kleos" />
 
     <meta property="og:type" content="website" />
@@ -58,10 +58,12 @@ const socialImage = new URL('/favicon-512.png', canonical);
   </head>
   <body class="min-h-dvh">
     <div class="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 py-10">
-      <header class="mb-10">
-        <a href="/" class="font-display text-2xl tracking-wide text-laurel">kleos</a>
-        <p class="mt-1 text-sm text-muted">Glory won by deeds.</p>
-      </header>
+      <slot name="header">
+        <header class="mb-10">
+          <a href="/" class="text-2xl font-semibold tracking-tight">kleos</a>
+          <p class="font-display mt-1 text-sm text-muted">Glory won by deeds.</p>
+        </header>
+      </slot>
 
       <main class="flex-1">
         <slot />
