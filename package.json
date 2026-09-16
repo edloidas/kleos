@@ -16,7 +16,16 @@
     "build": "node scripts/ensure-fixture.mjs --strict && wrangler types && astro build",
     "preview": "node scripts/ensure-fixture.mjs --strict && astro build && wrangler dev",
     "deploy": "node scripts/ensure-fixture.mjs --strict && astro build && wrangler deploy",
-    "check": "node scripts/ensure-fixture.mjs && wrangler types && astro check",
+    "check": "node scripts/ensure-fixture.mjs && pnpm --no-bail run /^check:/",
+    "check:types": "node scripts/ensure-fixture.mjs && wrangler types && astro check",
+    "check:lint": "oxlint -c .oxlintrc.json",
+    "check:format": "oxfmt -c .oxfmtrc.json --check .",
+    "check:test": "vitest run",
+    "lint": "oxlint -c .oxlintrc.json --fix",
+    "format": "oxfmt -c .oxfmtrc.json .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:watch": "vitest",
     "types": "wrangler types",
     "db:local": "wrangler d1 execute kleos --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute kleos --remote --file=./schema.sql",
@@ -24,7 +33,9 @@
     "fixture": "node scripts/ensure-fixture.mjs"
   },
   "nano-staged": {
-    "*": "node scripts/guard-staged.mjs"
+    "*": "node scripts/guard-staged.mjs",
+    "*.{ts,tsx}": ["oxfmt -c .oxfmtrc.json --write", "oxlint -c .oxlintrc.json"],
+    "*.astro": "oxlint -c .oxlintrc.json"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.3.1",
@@ -37,11 +48,18 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.0.1",
     "nano-staged": "^1.0.2",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
+    "vitest": "^5.0.0",
     "wrangler": "^4.131.2"
   }
 }

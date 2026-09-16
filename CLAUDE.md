@@ -7,16 +7,26 @@ Contribution leaderboards for GitHub organizations. Astro 7 SSR on Cloudflare Wo
 ```bash
 pnpm run dev       # Astro dev server on :4321 (Node, bindings emulated)
 pnpm run preview   # build + wrangler dev on :8787 (real workerd — use before deploying)
-pnpm run check     # wrangler types + astro check
+pnpm run check     # everything below, in parallel
+pnpm run check:types   # wrangler types + astro check
+pnpm run check:lint    # oxlint
+pnpm run check:format  # oxfmt --check
+pnpm run check:test    # both vitest projects
+pnpm run format    # oxfmt, writing in place
+pnpm run lint      # oxlint --fix
+pnpm run test      # both vitest projects
+pnpm run test:unit # the node project only
 pnpm run deploy    # build + publish
 ```
 
 ## CI and hooks
 
-- Pull requests run `.github/workflows/check.yml` (`check` then `build`). Pushes to `master` run `.github/workflows/deploy.yml`, which checks and then `pnpm run deploy` against the `production` environment.
+- Pull requests run `.github/workflows/check.yml`, whose `lint` and `build` jobs run in parallel. Pushes to `master` run `.github/workflows/deploy.yml`, which checks and then `pnpm run deploy` against the `production` environment.
 - The workflows use `pnpm exec wrangler` rather than `cloudflare/wrangler-action`, so CI deploys with the wrangler version the lockfile pins. Authentication is `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets.
-- `pnpm install` runs `prepare`, which sets `core.hooksPath` to `.githooks`. The pre-commit hook runs `nano-staged` (→ `scripts/guard-staged.mjs`, which refuses staged secrets and a force-added fixture) and then `pnpm run check`.
-- `astro check` reads the working tree, not the staged content, so the hook verifies what is on disk rather than what is being committed.
+- `pnpm install` runs `prepare`, which sets `core.hooksPath` to `.githooks`.
+- Three stages, split by what each costs. **pre-commit** (~1s) runs `nano-staged` over staged files only: `scripts/guard-staged.mjs`, which refuses staged secrets and a force-added fixture, then oxfmt and oxlint. **pre-push** (~10s) runs `astro check` and the unit tests concurrently. **CI** runs everything, and is the only stage that runs the jsdom project.
+- The budgets are the design. A check that outgrows its stage moves to the next one rather than making commits slower; that is why the unit tests are on push and not on commit.
+- `astro check` reads the working tree, not the staged content, so pre-push verifies what is on disk rather than what is being pushed.
 
 ## Constraints
 
@@ -27,7 +37,9 @@ pnpm run deploy    # build + publish
 - Server code is bundled, so npm packages are fine as long as they do not need Node built-ins.
 - Every route is SSR (`output: 'server'`); they all read bindings, so nothing prerenders.
 - Bindings come from `import { env } from 'cloudflare:workers'`. `Astro.locals.runtime` was removed in adapter v13 / Astro 6; the properties survive as throwing getters, so older examples fail at runtime rather than at build.
-- No linter is configured. `astro check` is the only checker, and it is the only one that understands `.astro`.
+- oxlint and oxfmt cover `.ts` and `.tsx`; oxlint also reads the script block of an `.astro` file, oxfmt does not touch one. `astro check` remains the only checker that understands a component as a whole, and the only one that type-checks. oxfmt is also kept off `.json` and `.jsonc`: it rewrites `wrangler.jsonc` with trailing commas, which is churn on the file every deploy reads.
+- Tests are vitest, in two projects: `unit` on node for `src/lib`, `components` on jsdom for `src/components`. The split is what lets `test:unit` run in a hook while the jsdom project cannot.
+- `scripts/` is linted with Node globals allowed, through an override in `.oxlintrc.json` scoped to that directory. Everywhere else the Node globals stay absent, for the same reason `@types/node` is not installed.
 
 ## Architecture rules (target state)
 

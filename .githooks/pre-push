@@ -1,0 +1,31 @@
+#!/bin/sh
+# Enabled by the `prepare` script, which points core.hooksPath at this directory.
+# Skip with `git push --no-verify`.
+set -e
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm='pnpm'
+elif command -v corepack >/dev/null 2>&1; then
+  pnpm='corepack pnpm'
+else
+  echo 'pre-push: no pnpm and no corepack on PATH.' >&2
+  echo 'Run `corepack enable pnpm`, or skip once with `git push --no-verify`.' >&2
+  exit 1
+fi
+
+# Both generated and both gitignored, so a fresh clone has neither. Serial on
+# purpose: the checks below read them.
+[ -f src/fixtures/boards.json ] || $pnpm run fixture
+[ worker-configuration.d.ts -nt wrangler.jsonc ] || $pnpm exec wrangler types >/dev/null
+
+# `astro check` reads the working tree, not what is being pushed.
+$pnpm exec astro check &
+types=$!
+$pnpm run test:unit &
+unit=$!
+
+status=0
+wait $types || status=1
+wait $unit || status=1
+
+exit $status

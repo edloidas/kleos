@@ -17,7 +17,3 @@ else
 fi
 
 $pnpm exec nano-staged
-
-# astro check is the only checker this repository has, and it is whole-project:
-# it reads the working tree, not the staged content.
-$pnpm run check

@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "react", "react-hooks", "jsx-a11y"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "es2024": true
+  },
+  "ignorePatterns": [
+    "dist/**",
+    ".astro/**",
+    ".wrangler/**",
+    "worker-configuration.d.ts",
+    "src/fixtures/**"
+  ],
+  "rules": {
+    "no-console": "off",
+    "no-debugger": "error",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": "error",
+    "no-eval": "error",
+    // `env` only declares globals and no-undef is off by default, so nothing
+    // enforces the Worker/Node split unless both are named here.
+    "no-undef": "error",
+    "import/no-nodejs-modules": "error",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "warn",
+    "typescript/no-explicit-any": "warn",
+    "typescript/consistent-type-imports": "warn",
+
+    "react/react-in-jsx-scope": "off",
+
+    // Every loop that awaits here is a cursor or a rate-limit batch: the next
+    // request needs the previous answer, so there is nothing to parallelise.
+    "no-await-in-loop": "off",
+    // `import '../styles/global.css'` is the only way to pull in a stylesheet.
+    "import/no-unassigned-import": "off",
+    // The idiom the codebase uses is `.map().sort()`, which sorts a fresh array.
+    "unicorn/no-array-sort": "off"
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "warn"
+  },
+  "overrides": [
+    {
+      // oxlint reads only a component's frontmatter script block, where the `Astro`
+      // global lives; `astro check` owns the rest.
+      "files": ["**/*.astro"],
+      "env": { "astro": true }
+    },
+    {
+      // Real Node, and excluded from tsconfig.json, which types the Worker only.
+      "files": ["scripts/**"],
+      "env": { "node": true },
+      "rules": { "import/no-nodejs-modules": "off" }
+    }
+  ]
+}

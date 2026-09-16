@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "sortPackageJson": false,
+  "sortImports": {
+    "ignoreCase": true,
+    "order": "asc",
+    "newlinesBetween": true,
+    "groups": [
+      "builtin",
+      "external",
+      ["internal", "subpath"],
+      ["parent", "sibling", "index"],
+      "style",
+      "unknown"
+    ]
+  },
+  "sortTailwindcss": {
+    "stylesheet": "src/styles/global.css",
+    "attributes": ["className", "class"],
+    "functions": ["clsx", "cn", "cva", "tw", "twMerge", "twJoin"],
+    "preserveDuplicates": false,
+    "preserveWhitespace": false
+  },
+  // oxfmt has no `.astro` support, and is kept off `.json`/`.jsonc` because it
+  // rewrites wrangler.jsonc with trailing commas.
+  "ignorePatterns": [
+    "**/*.json",
+    "**/*.jsonc",
+    "dist/**",
+    ".astro/**",
+    ".wrangler/**",
+    "worker-configuration.d.ts",
+    "src/fixtures/**"
+  ]
+}
