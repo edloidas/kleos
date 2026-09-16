@@ -38,3 +38,40 @@ export function routeForAccount(account: Account, requested = false): Route {
 
   return { kind: 'not-enabled', status: requested ? 200 : 404 };
 }
+
+/**
+ * The free half of the waitlist decision, read off the route the page takes, so
+ * one definition of a well-formed name serves both. Lowercased first because a
+ * POST has no canonical URL to send anyone to — which leaves `routeFor` only the
+ * two answers below, and `null` where an account lookup has to place the name.
+ */
+export function waitlistFor(name: string, supported: boolean): 'malformed' | 'enabled' | null {
+  const route = routeFor(name.toLowerCase(), supported);
+
+  if (route === null) {
+    return null;
+  }
+
+  return route.kind === 'board' ? 'enabled' : 'malformed';
+}
+
+/**
+ * `unknown` means two things, and the waitlist is where they have to be told apart.
+ * Nothing asked — no token — accepts, as the page renders the form there. Asked and
+ * unanswered does not: a spent rate limit or an outage would otherwise reopen this
+ * gate for the length of the window.
+ */
+export function waitlistForAccount(
+  account: Account,
+  asked: boolean,
+): 'accept' | 'user' | 'missing' | 'unresolved' {
+  if (account === 'user') {
+    return 'user';
+  }
+
+  if (account === 'none') {
+    return 'missing';
+  }
+
+  return account === 'unknown' && asked ? 'unresolved' : 'accept';
+}
