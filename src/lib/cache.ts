@@ -1,12 +1,8 @@
 import { env } from 'cloudflare:workers';
 
 import type { Scope } from './github/token';
-import type { Period } from './periods';
-import { FORMULA_VERSION } from './score';
 import type { WeekId } from './weeks';
 import { nextUtcMidnight } from './weeks';
-
-const TTL_SECONDS = 6 * 60 * 60;
 
 /** A finished week's counts only change if GitHub rewrites history, so they are held long. */
 const WEEK_TTL_SECONDS = 60 * 24 * 60 * 60;
@@ -18,46 +14,11 @@ const MIN_EXPIRATION_SECONDS = 60;
  * `scope` keeps an authenticated viewer's richer results out of the public entry.
  * Dropping it would leak private contribution counts to anonymous visitors.
  *
- * Entries hold scores, not counts, and KV outlives a deploy. Without the formula
- * version a scoring change would serve boards ranked by the old rules for a whole
- * TTL, under a page printing the new ones.
- */
-function key(org: string, period: Period, scope: string): string {
-  return `board:${FORMULA_VERSION}:${org.toLowerCase()}:${period}:${scope}`;
-}
-
-/**
- * No formula version here, unlike the board: these entries hold GitHub's raw
- * counts, which a scoring change does not invalidate. Versioning them would
- * throw away weeks of already-fetched data every time a weight is retuned.
+ * No formula version in the key: these entries hold GitHub's raw counts, not the
+ * ladder derived from them, so a scoring change does not invalidate them.
  */
 function weekKey(org: string, week: WeekId, scope: Scope): string {
   return `counts:${org.toLowerCase()}:${week}:${scope}`;
-}
-
-export type Cached<T> = { value: T; cachedAt: string };
-
-export async function readBoard<T>(
-  org: string,
-  period: Period,
-  scope: string,
-): Promise<Cached<T> | null> {
-  return await env.CACHE.get<Cached<T>>(key(org, period, scope), 'json');
-}
-
-export async function writeBoard<T>(
-  org: string,
-  period: Period,
-  scope: string,
-  value: T,
-): Promise<Cached<T>> {
-  const entry: Cached<T> = { value, cachedAt: new Date().toISOString() };
-
-  await env.CACHE.put(key(org, period, scope), JSON.stringify(entry), {
-    expirationTtl: TTL_SECONDS,
-  });
-
-  return entry;
 }
 
 export async function readWeek<T>(org: string, week: WeekId, scope: Scope): Promise<T | null> {

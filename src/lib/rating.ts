@@ -15,8 +15,14 @@ export const RATING_SCALE = 400;
 /** Rounds a member has to have played before their rating says anything about them. */
 export const MIN_ROUNDS = 3;
 
-/** Printed beside the season name: a redeploy that re-rates the season has to be explainable. */
-export const RATING_VERSION = 'v1';
+/**
+ * Printed beside the season name: a redeploy that re-rates the season has to be
+ * explainable. It covers everything the ladder is derived from — the placement
+ * weights and their k table in `score.ts` as well as the constants here — because
+ * nothing is stored, so retuning any of them rewrites the whole season's history
+ * on the next render. Bump it whenever one of them moves.
+ */
+export const LADDER_VERSION = 'v1';
 
 /** A season's rounds in order, as `loadSeason` returns them. */
 export type Rounds = ReadonlyMap<WeekId, Contributions[]>;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Contributions } from './github/contributions';
-import { FORMULA_VERSION, HALF_AT, WEIGHTS, rank, score } from './score';
+import { rank, score } from './score';
 
 function member(
   login: string,
@@ -88,17 +88,6 @@ describe('score', () => {
 
     expect(score(c)).toBe(0);
   });
-
-  // The version is part of the board cache key, and KV outlives a deploy. Change
-  // a weight or a k here without bumping the version and the old boards are
-  // served for a whole TTL, so the two are pinned as one literal.
-  it('ties the formula version to the constants it versions', () => {
-    expect({ version: FORMULA_VERSION, weights: WEIGHTS, halfAt: HALF_AT }).toEqual({
-      version: 'v2',
-      weights: { pullRequests: 5, reviews: 4, issues: 2, commits: 1 },
-      halfAt: { pullRequests: 2, reviews: 3, issues: 2, commits: 8 },
-    });
-  });
 });
 
 describe('rank', () => {
@@ -116,6 +105,6 @@ describe('rank', () => {
   it('attaches the score it sorted by', () => {
     const [top] = rank([CAROL, ALICE]);
 
-    expect(top.score).toBeCloseTo(score(ALICE), 10);
+    expect(top.score).toBeCloseTo(7.0256, 4);
   });
 });

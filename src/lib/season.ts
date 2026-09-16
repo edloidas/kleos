@@ -2,8 +2,9 @@ import { readWeek, writeWeek } from './cache';
 import type { Contributions, Roster } from './github/contributions';
 import { fetchCounts, fetchRoster } from './github/contributions';
 import type { Viewer } from './github/token';
+import { RosterSizeError, sizeLimit } from './roster';
 import type { WeekId } from './weeks';
-import { fetchRange, hasCompletedDay, isComplete, seasonWeeks } from './weeks';
+import { fetchRange, isComplete } from './weeks';
 
 /**
  * Weeks in flight at once. A request costs one GraphQL point whatever its window,
@@ -15,20 +16,19 @@ const MAX_IN_FLIGHT = 5;
 export type Season = Map<WeekId, Contributions[]>;
 
 /**
- * Every round of `month`'s season, cached per week rather than per board: a
- * completed week is fetched once and reused for the rest of the season, so only
- * the live week costs anything after the first day.
+ * The named rounds, cached per week rather than per board: a completed week is
+ * fetched once and reused for the rest of the season, so only the live week costs
+ * anything after the first day.
  *
- * Which month to show is the page's decision, so the caller names it.
+ * The caller names the weeks directly rather than a month, because the week and
+ * month views can want different seasons (see `getBoard`).
  */
 export async function loadSeason(
   viewer: Viewer,
   org: string,
-  month: Date,
+  weeks: WeekId[],
   now = new Date(),
 ): Promise<Season> {
-  const weeks = seasonWeeks(month).filter((week) => hasCompletedDay(week, now));
-
   if (weeks.length === 0) {
     return new Map();
   }
@@ -57,6 +57,12 @@ export async function loadSeason(
       throw new Error(`No GitHub organization ${org}; cannot load its season.`);
     }
 
+    const limit = sizeLimit(roster.logins.length);
+
+    if (limit) {
+      throw new RosterSizeError(roster.logins.length, limit);
+    }
+
     await inFlight(missing, MAX_IN_FLIGHT, async (week) => {
       season.set(week, await load(viewer, org, roster, week, now));
     });
@@ -75,9 +81,9 @@ async function load(
 ): Promise<Contributions[]> {
   const counts = await fetchCounts(viewer.token, roster, fetchRange(week, now));
 
-  // Best-effort, like the board cache: data worth serving is worth serving when
-  // KV is unavailable. An empty week is real and gets cached — a member simply
-  // did nothing — unlike an empty board, which is almost always misconfiguration.
+  // Best-effort: data worth serving is worth serving even when KV is down. An
+  // empty week is a real result and still gets cached — a member simply did
+  // nothing that week.
   try {
     await writeWeek(org, week, viewer.scope, counts, isComplete(week, now), now);
   } catch {

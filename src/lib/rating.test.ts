@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { Contributions } from './github/contributions';
 import type { Rounds } from './rating';
-import { K_FACTOR, MIN_ROUNDS, RATING_SCALE, RATING_VERSION, START_RATING, ladder } from './rating';
+import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, RATING_SCALE, START_RATING, ladder } from './rating';
+import { HALF_AT, WEIGHTS } from './score';
 import type { WeekId } from './weeks';
 
 /** September 2026: the ISO weeks whose Thursday falls in the month. */
@@ -292,15 +293,24 @@ describe('ladder', () => {
     });
   });
 
-  // A rating a deploy can rewrite has to say which rules produced it, so retuning
-  // a constant fails here — which is where the version gets bumped with it.
-  it('pins the rating constants and the version printed beside them', () => {
+  // Guards against a constant moving without `LADDER_VERSION` bumping with it.
+  it('pins every constant the printed version covers', () => {
     expect({
-      version: RATING_VERSION,
+      version: LADDER_VERSION,
       k: K_FACTOR,
       start: START_RATING,
       scale: RATING_SCALE,
       minRounds: MIN_ROUNDS,
-    }).toEqual({ version: 'v1', k: 24, start: 1000, scale: 400, minRounds: 3 });
+      weights: WEIGHTS,
+      halfAt: HALF_AT,
+    }).toEqual({
+      version: 'v1',
+      k: 24,
+      start: 1000,
+      scale: 400,
+      minRounds: 3,
+      weights: { pullRequests: 5, reviews: 4, issues: 2, commits: 1 },
+      halfAt: { pullRequests: 2, reviews: 3, issues: 2, commits: 8 },
+    });
   });
 });
