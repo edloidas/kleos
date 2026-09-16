@@ -7,7 +7,7 @@ import { resolveAccount } from '../lib/account';
 import { getBoard } from '../lib/board';
 import { GitHubError } from '../lib/github/client';
 import { resolveViewer } from '../lib/github/token';
-import { isSupported } from '../lib/orgs';
+import { excludedLogins, isSupported } from '../lib/orgs';
 import { MAX_MEMBERS, MIN_MEMBERS } from '../lib/roster';
 import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, START_RATING } from '../lib/rating';
 import { routeFor, routeForAccount } from '../lib/route';
@@ -37,7 +37,7 @@ let error: string | null = null;
 
 if (route.kind === 'board') {
   try {
-    board = await getBoard(viewer, name);
+    board = await getBoard(viewer, name, new Date(), excludedLogins());
   } catch (cause) {
     // The raw message carries rate-limit identifiers and internal exception text,
     // so it goes to the log and the visitor gets a status they can act on.

@@ -418,3 +418,126 @@ describe('getBoard with a token', () => {
     expect(board.limit).toBe('too-small');
   });
 });
+
+describe('getBoard exclusions', () => {
+  it('drops an excluded member from the standings, the ladder and the count', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [
+        member('ada', { pullRequests: 2 }),
+        member('bob', { commits: 3 }),
+        member('cas', { issues: 1 }),
+      ],
+    };
+
+    const board = await getBoard(null, 'acme', NOW, ['bob']);
+
+    expect(board.week.standings.map((row) => row.login)).toEqual(['ada', 'cas']);
+    expect([...board.month.ranked, ...board.month.unranked].map((row) => row.login)).not.toContain(
+      'bob',
+    );
+    expect(board.members).toBe(2);
+  });
+
+  // The filter runs before the rating, so a round the excluded member won is a
+  // round the remaining members played among themselves.
+  it('re-rates the round without the excluded member rather than hiding the row', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [
+        member('ada', { pullRequests: 1 }),
+        member('bob', { pullRequests: 9 }),
+        member('cas', { commits: 1 }),
+      ],
+    };
+
+    const board = await getBoard(null, 'acme', NOW, ['bob']);
+    const [first, second] = board.week.standings;
+
+    expect(first!.login).toBe('ada');
+    expect(first!.place).toBe(1);
+    expect(second!.delta).toBeCloseTo(-first!.delta, 5);
+  });
+
+  it('matches a login whose case differs from the configured entry', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [member('AdaLovelace', { pullRequests: 2 }), member('bob', { commits: 3 })],
+    };
+
+    const board = await getBoard(null, 'acme', NOW, ['adalovelace']);
+
+    expect(board.week.standings.map((row) => row.login)).toEqual(['bob']);
+  });
+
+  it('excludes nobody when no list is configured', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [member('ada', { pullRequests: 2 }), member('bob', { commits: 3 })],
+    };
+
+    const board = await getBoard(null, 'acme', NOW);
+
+    expect(board.week.standings.map((row) => row.login)).toEqual(['ada', 'bob']);
+  });
+
+  // The size verdict is recomputed from the season on every render, so it sees
+  // the published roster rather than the one GitHub returned. Three members with
+  // one excluded leave two, and two are not a ladder.
+  it('refuses a board the exclusion leaves below the minimum roster', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [member('ada', { commits: 4 }), member('bob'), member('cas')],
+    };
+
+    const board = await getBoard(null, 'acme', NOW, ['cas']);
+
+    expect(board.members).toBe(2);
+    expect(board.limit).toBe('too-small');
+  });
+
+  // The case `servedLimit` splits the ceiling from the floor for.
+  it('keeps refusing an oversized organization the exclusions bring under the cap', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': Array.from({ length: 101 }, (_, i) => member(`m${i}`)),
+    };
+
+    const board = await getBoard(null, 'acme', NOW, ['m0', 'm1']);
+
+    expect(board.members).toBe(99);
+    expect(board.limit).toBe('too-large');
+  });
+
+  // The boundary between a hidden roster and an absent one, which the tokenless
+  // render passes no verdict on.
+  it('still refuses an oversized roster the exclusions hide entirely', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': Array.from({ length: 101 }, (_, i) => member(`m${i}`)),
+    };
+
+    const board = await getBoard(
+      null,
+      'acme',
+      NOW,
+      Array.from({ length: 101 }, (_, i) => `m${i}`),
+    );
+
+    expect(board.members).toBe(0);
+    expect(board.limit).toBe('too-large');
+  });
+
+  it('excludes from a live season the same way as from the snapshot', async () => {
+    vi.mocked(loadSeason).mockResolvedValue(
+      new Map([
+        [
+          '2026-W38',
+          [
+            member('ada', { pullRequests: 2 }),
+            member('bob', { commits: 1 }),
+            member('cas', { issues: 1 }),
+          ],
+        ],
+      ]),
+    );
+
+    const board = await getBoard(VIEWER, 'acme', NOW, ['bob']);
+
+    expect(board.week.standings.map((row) => row.login)).toEqual(['ada', 'cas']);
+    expect(board.members).toBe(2);
+  });
+});
