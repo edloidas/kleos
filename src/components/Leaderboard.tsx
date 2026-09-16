@@ -1,5 +1,5 @@
 import type { ScoredMember } from '../lib/score';
-import { WEIGHTS } from '../lib/score';
+import { HALF_AT, WEIGHTS } from '../lib/score';
 
 /**
  * Rendered on the server for now — no client directive, so the page ships zero JS.
@@ -32,7 +32,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
             <a href={`https://github.com/${member.login}`} className="font-medium hover:underline">
               {member.name ?? member.login}
             </a>
-            <div className="mt-1 text-sm text-muted">{member.score} points</div>
+            <div className="mt-1 text-sm text-muted">{member.score.toFixed(1)} points</div>
           </li>
         ))}
       </ol>
@@ -63,7 +63,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
                 <td className="py-2 pr-4 text-right">{member.reviews}</td>
                 <td className="py-2 pr-4 text-right">{member.issues}</td>
                 <td className="py-2 pr-4 text-right">{member.commits}</td>
-                <td className="py-2 text-right text-laurel">{member.score}</td>
+                <td className="py-2 text-right text-laurel">{member.score.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>
@@ -71,8 +71,10 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
       </div>
 
       <p className="text-xs text-muted">
-        Score = {WEIGHTS.pullRequests}×PR + {WEIGHTS.reviews}×review + {WEIGHTS.issues}×issue +{' '}
-        {WEIGHTS.commits}×commit.
+        Score = sum of weight × n / (n + k), over PRs ({WEIGHTS.pullRequests}/{HALF_AT.pullRequests}
+        ), reviews ({WEIGHTS.reviews}/{HALF_AT.reviews}), issues ({WEIGHTS.issues}/{HALF_AT.issues})
+        and commits ({WEIGHTS.commits}/{HALF_AT.commits}). Each category maxes out at its weight and
+        reaches half of it at k. Scores are shown to one decimal; ranking uses the unrounded value.
       </p>
     </div>
   );
