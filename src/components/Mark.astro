@@ -1,0 +1,79 @@
+<div class="mb-12 flex flex-col items-center">
+  <div
+    class="group relative size-44 cursor-grab touch-pan-y rounded-full outline-none focus-visible:ring-2 focus-visible:ring-bronze active:cursor-grabbing [&>canvas]:absolute [&>canvas]:inset-0 [&>canvas]:size-full [&>canvas]:opacity-0 [&>canvas]:transition-opacity [&>canvas]:duration-500 data-ready:[&>canvas]:opacity-100"
+    role="img"
+    aria-label="kleos shield"
+    data-shield
+  >
+    <div
+      class="pointer-events-none absolute bottom-[2%] left-1/2 h-[5%] w-[46%] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgb(40_32_18/0.35)_0%,transparent_70%)] opacity-0 blur-[6px] transition-opacity duration-500 group-data-ready:opacity-75"
+      data-shield-shadow
+    >
+    </div>
+    <img
+      src="/favicon-512.png"
+      alt=""
+      width="148"
+      height="148"
+      class="absolute inset-[8%] size-[84%] transition-opacity duration-500 group-data-ready:opacity-0"
+    />
+  </div>
+
+  <div class="mt-7 inline-grid">
+    <p class="text-6xl leading-none font-semibold tracking-tight">κλέος</p>
+    <hr class="my-3 border-line" />
+    <p class="justify-both font-display text-[0.6875rem] tracking-[0.18em] text-muted uppercase">
+      Glory won by deeds
+    </p>
+  </div>
+</div>
+
+<script>
+  import { createShieldBadge } from './shield-badge';
+
+  const container = document.querySelector<HTMLElement>('[data-shield]');
+  const shadow = document.querySelector<HTMLElement>('[data-shield-shadow]');
+
+  // Without WebGL the static medallion stays, so a failure here is not an error for the page.
+  function mount(root: HTMLElement) {
+    try {
+      const badge = createShieldBadge(root, {
+        front: '/favicon-512.png',
+        back: '/shield-back.png',
+        thickness: 0.047,
+        dome: 0.067,
+        concave: 0.057,
+        onFrame({ angle, bob }) {
+          if (!shadow) return;
+          // The shadow narrows when the shield is edge-on and fades as it rises.
+          shadow.style.width = `${22 + 26 * Math.abs(Math.cos(angle))}%`;
+          shadow.style.opacity = (0.75 - bob * 4).toFixed(3);
+        },
+      });
+      badge.ready.then(
+        () => {
+          root.dataset.ready = '';
+          root.tabIndex = 0;
+          root.ariaLabel =
+            'kleos shield. Drag or press the arrow keys to spin it, click or press Enter to stop or resume it.';
+        },
+        (error: unknown) => {
+          console.warn(error);
+          badge.dispose();
+        },
+      );
+      root.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          badge.toggleSpin();
+        }
+        if (event.key === 'ArrowLeft') badge.nudge(-3);
+        if (event.key === 'ArrowRight') badge.nudge(3);
+      });
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+
+  if (container) mount(container);
+</script>

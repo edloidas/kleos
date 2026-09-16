@@ -1,21 +1,32 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource/pt-serif/latin-400.css';
 
 @theme {
-  --color-ink: #0d0b0a;
-  --color-surface: #16120f;
-  --color-line: #2c241d;
-  --color-parchment: #f3ece0;
-  --color-muted: #a2937f;
+  --color-parchment: #f5f4f1;
+  --color-surface: #ffffff;
+  --color-line: #e3ded4;
+  --color-ink: #1c1a17;
+  --color-muted: #6e665a;
   --color-laurel: #c9a227;
+  --color-bronze: #8a6a1f;
 
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'PT Serif', 'Iowan Old Style', Palatino, Georgia, serif;
+}
+
+/* Stretches a single line to the width of its container, which is how the motto
+   comes out the same width as the wordmark above it. */
+@utility justify-both {
+  text-align: justify;
+  text-align-last: justify;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background-color: var(--color-ink);
-  color: var(--color-parchment);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
 }

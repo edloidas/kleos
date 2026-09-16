@@ -94,7 +94,7 @@ function Row({ entry, place }: { entry: LadderRow; place: number }) {
           {entry.name ?? entry.login}
         </a>
       </td>
-      <td className="py-2 pr-4 text-right text-laurel">{Math.round(entry.rating)}</td>
+      <td className="py-2 pr-4 text-right text-bronze">{Math.round(entry.rating)}</td>
       <td className="py-2 pr-4 text-right text-muted">{delta(entry.lastDelta)}</td>
       <td className="py-2 text-right">{entry.roundsPlayed}</td>
     </tr>
