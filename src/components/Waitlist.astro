@@ -23,11 +23,11 @@ const { org, requested = false } = Astro.props;
       name="email"
       placeholder="you@example.com"
       required
-      class="flex-1 rounded-md border border-line bg-surface px-4 py-2 outline-none focus:border-bronze"
+      class="pressed flex-1 rounded-2xl border border-line px-4 py-3 text-ink outline-none placeholder:text-muted focus:ring-2 focus:ring-bronze"
     />
     <button
       type="submit"
-      class="rounded-md bg-laurel px-5 py-2 font-medium text-ink hover:opacity-90"
+      class="shadow-raised rounded-2xl border border-bronze bg-laurel px-5 py-3 font-medium text-on-laurel transition-transform duration-150 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-bronze focus-visible:outline-none active:scale-95 active:shadow-pressed-sm"
     >
       Notify me
     </button>

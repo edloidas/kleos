@@ -57,6 +57,12 @@
       "env": { "astro": true }
     },
     {
+      // `define:vars` injects these into the inline theme script as consts Astro
+      // writes at build time, which oxlint cannot see and reads as undefined.
+      "files": ["src/layouts/Base.astro"],
+      "globals": { "themeColor": "readonly", "themeKey": "readonly" }
+    },
+    {
       // Real Node, and excluded from tsconfig.json, which types the Worker only.
       "files": ["scripts/**"],
       "env": { "node": true },

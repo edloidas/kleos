@@ -3,6 +3,8 @@ import interGreek from '@fontsource-variable/inter/files/inter-greek-wght-normal
 import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import ptSerifLatin from '@fontsource/pt-serif/files/pt-serif-latin-400-normal.woff2?url';
 
+import Header from '../components/Header.astro';
+import { THEME_COLOR, THEME_KEY } from '../lib/theme';
 import '../styles/global.css';
 
 interface Props {
@@ -22,8 +24,39 @@ const socialImage = new URL('/favicon-512.png', canonical);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f5f4f1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content={THEME_COLOR.light} />
+    <meta name="color-scheme" content="light dark" />
+
+    <!-- Inline and blocking: the stored mode has to reach the root before the
+      first paint or the page flashes the other theme. `define:vars` is what keeps
+      it from becoming a second copy of the values src/lib/theme.ts owns. -->
+    <script is:inline define:vars={{ themeColor: THEME_COLOR, themeKey: THEME_KEY }}>
+      (() => {
+        const root = document.documentElement;
+        let mode = 'system';
+
+        try {
+          const stored = localStorage.getItem(themeKey);
+          if (stored === 'light' || stored === 'dark') mode = stored;
+        } catch {
+          // Storage is unreadable in a locked-down browser; the system mode stands.
+        }
+
+        const dark = mode === 'dark' ||
+          (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        root.dataset.theme = mode;
+        root.classList.toggle('light', !dark);
+        root.classList.toggle('dark', dark);
+
+        // The meta is read for the browser's own chrome, which paints with the
+        // page; leaving it to the deferred module tints the address bar light
+        // behind a dark page until that module runs.
+        document
+          .querySelector('meta[name="theme-color"]')
+          .setAttribute('content', dark ? themeColor.dark : themeColor.light);
+      })();
+    </script>
 
     <!-- The faces are named by the stylesheet, so they are discovered a round trip
       late; the wordmark is Greek, which is why that subset is preloaded too. -->
@@ -67,25 +100,20 @@ const socialImage = new URL('/favicon-512.png', canonical);
     <meta name="twitter:image:alt" content="kleos mark" />
   </head>
   <body class="min-h-dvh">
-    <div class="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 py-10">
-      <slot name="header">
-        <header class="mb-10">
-          <a href="/" class="text-2xl font-semibold tracking-tight">kleos</a>
-          <p class="font-display mt-1 text-sm text-muted">Glory won by deeds.</p>
-        </header>
-      </slot>
+    <div class="flex min-h-dvh flex-col px-4 pb-10">
+      <Header>
+        <slot name="toolbar" />
+      </Header>
 
-      <main class="flex-1">
-        <slot />
-      </main>
+      <div class="mx-auto flex w-full max-w-4xl flex-1 flex-col">
+        <slot name="header" />
 
-      <footer class="mt-16 border-t border-line pt-6 text-xs text-muted">
-        <p>
-          Counts come from the GitHub API and cover public contributions only. The running week is
-          recounted once a day, when another UTC day completes; a finished week keeps the numbers it
-          ended with.
-        </p>
-      </footer>
+        <main class="flex-1">
+          <slot />
+        </main>
+
+        <slot name="footer" />
+      </div>
     </div>
   </body>
 </html>

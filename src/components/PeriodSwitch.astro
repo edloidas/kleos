@@ -1,0 +1,73 @@
+---
+import { VIEWS } from '../lib/views';
+import type { View } from '../lib/views';
+
+interface Props {
+  name: string;
+  view: View;
+}
+
+const { name, view } = Astro.props;
+
+// The island is one column wide and moves by whole multiples of itself, so the
+// subtrahend here has to stay equal to the track's padding.
+const index = VIEWS.indexOf(view);
+const width = `calc(${100 / VIEWS.length}% - 0.25rem)`;
+---
+
+<div
+  class="pointer-events-auto pressed relative grid h-10 grid-cols-2 rounded-xl border border-line p-1 text-sm"
+  role="group"
+  aria-label="Period"
+  data-period-switch
+>
+  <span
+    class="raised absolute top-1 bottom-1 left-1 rounded-lg border border-line transition-transform duration-300 ease-out"
+    style={{ width, transform: `translateX(${index * 100}%)` }}
+    aria-hidden="true"
+    data-period-island
+  >
+  </span>
+
+  {
+    VIEWS.map((value) => (
+      <a
+        href={`/${name}?period=${value}`}
+        aria-current={value === view ? 'true' : undefined}
+        data-period={value}
+        class:list={[
+          'relative z-10 grid cursor-pointer place-items-center rounded-lg px-4 capitalize transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-bronze',
+          value === view ? 'font-medium text-ink' : 'text-muted hover:text-ink',
+        ]}
+      >
+        {value}
+      </a>
+    ))
+  }
+</div>
+
+<script>
+  // The navigation is a server render, so the island would otherwise only ever be
+  // found already in place; moving it here lets it travel while the response is
+  // in flight.
+  const track = document.querySelector<HTMLElement>('[data-period-switch]');
+  const island = track?.querySelector<HTMLElement>('[data-period-island]');
+
+  if (track && island) {
+    const links = [...track.querySelectorAll<HTMLAnchorElement>('[data-period]')];
+
+    for (const [index, link] of links.entries()) {
+      link.addEventListener('click', () => {
+        island.style.transform = `translateX(${index * 100}%)`;
+
+        for (const other of links) {
+          const active = other === link;
+
+          other.classList.toggle('font-medium', active);
+          other.classList.toggle('text-ink', active);
+          other.classList.toggle('text-muted', !active);
+        }
+      });
+    }
+  }
+</script>
