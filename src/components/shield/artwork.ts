@@ -141,9 +141,8 @@ function metalnessRoughnessMap(gold: Float32Array, size: number): HTMLCanvasElem
 }
 
 /**
- * The back carries a handle the front does not, so it is prepared separately:
- * anything gold well inside the outer ring is the strap, and it gets its own taller
- * relief, its own side walls and a contact shadow baked into the enamel under it.
+ * The back carries a handle the front does not: anything gold well inside the outer
+ * ring is the strap, and it gets its own taller relief, walls and contact shadow.
  */
 function prepareHandle(
   img: HTMLImageElement,
@@ -174,8 +173,7 @@ function prepareHandle(
     }
   }
 
-  // Solid strap silhouette: fill the small cut-outs so the handle is one piece,
-  // then keep the engraving as a shallow inset on top of it.
+  // Fill the small cut-outs so the strap is one piece, keeping the engraving as an inset.
   const soft = blurred(mask, N, 4);
   const solid = new Float32Array(N * N);
   for (let i = 0; i < N * N; i++) solid[i] = soft[i] > 0.22 ? 1 : 0;

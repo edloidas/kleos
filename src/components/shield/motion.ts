@@ -1,7 +1,6 @@
 /**
- * How the coin moves. No DOM, no renderer, no three.js — the loop feeds it a clock
- * and gets back a pose, and the browser adapter feeds it gestures in radians rather
- * than in pixels.
+ * How the coin moves. No DOM and no three.js: the loop feeds it a clock and gets back
+ * a pose, and the pointer adapter feeds it gestures in radians rather than in pixels.
  */
 
 export interface MotionOptions {
@@ -29,7 +28,6 @@ export interface Advance {
 
 export interface ShieldMotion {
   setAutoSpin(value: boolean, nowMs: number): void;
-  /** Stops the spin and brings the front round, or resumes a stopped spin. */
   toggleSpin(nowMs: number): void;
   nudge(impulse: number, nowMs: number): void;
   beginDrag(): void;

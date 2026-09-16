@@ -1,13 +1,5 @@
 import type { ShieldBadge } from './shield-badge';
 
-/**
- * Upgrades the static medallion on the front page to the WebGL badge.
- *
- * three.js is 131 KB gzipped for a decoration, so the page renders the `<img>` and
- * this fetches the module only for a visitor who will both see it move and be able
- * to. Nothing here is required for the page to work.
- */
-
 function canEnhance(): boolean {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return false;
@@ -60,8 +52,7 @@ function shadowPainter(shadow: HTMLElement | null) {
   return ({ angle, bob }: { angle: number; bob: number }) => {
     if (!shadow) return;
 
-    // The shadow narrows when the shield is edge-on and fades as it rises. Scaling
-    // it rather than resizing it keeps that off the layout path.
+    // Scaled rather than resized, to keep the per-frame write off the layout path.
     const narrow = 0.46 + 0.54 * Math.abs(Math.cos(angle));
 
     shadow.style.transform = `scaleX(${narrow.toFixed(3)})`;
@@ -70,8 +61,6 @@ function shadowPainter(shadow: HTMLElement | null) {
 }
 
 function upgrade(root: HTMLElement, shadow: HTMLElement | null): void {
-  // Without WebGL the static medallion stays, so a failure here is not an error for
-  // the page.
   import('./shield-badge')
     .then(({ createShieldBadge }) => {
       const badge = createShieldBadge(root, {
@@ -88,11 +77,14 @@ function upgrade(root: HTMLElement, shadow: HTMLElement | null): void {
     .catch((error: unknown) => console.warn(error));
 }
 
+/**
+ * Upgrades the static medallion to the WebGL badge. Nothing on the page may depend on
+ * it: a visitor who cannot use it never fetches the 131 KB and keeps the `<img>`.
+ */
 export function enhanceMark(root: HTMLElement, shadow: HTMLElement | null): void {
   if (!canEnhance()) return;
 
   whenIdle(() => {
-    // Scrolled past before the page went idle means it is never fetched at all.
     const io = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
 

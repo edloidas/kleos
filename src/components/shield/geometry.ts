@@ -30,9 +30,8 @@ export interface Face {
 }
 
 /**
- * One domed disc. `side` is +1 for the front and -1 for the back, whose UVs are
- * mirrored so the art reads correctly and whose dome is a hollow, making the badge
- * a shell rather than a solid slab.
+ * One domed disc. `side` is +1 for the front and -1 for the back, whose UVs mirror so
+ * the art reads correctly and whose dome is a hollow, making the badge a shell.
  */
 export function buildFace(sampleRelief: ReliefSample, side: 1 | -1, options: ShapeOptions): Face {
   const R = options.rings,
