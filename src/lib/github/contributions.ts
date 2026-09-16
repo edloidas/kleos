@@ -122,11 +122,7 @@ export async function fetchRoster(
   return { orgId, logins: await fetchMemberLogins(token, org, publicOnly) };
 }
 
-/**
- * The range is the caller's: a rolling period for the board, one ISO week for a
- * ladder round. The query shape does not depend on it, so a per-week fetch and
- * the snapshot still send the request `buildBatchQuery` has always built.
- */
+/** The range is the caller's: one ISO week for a ladder round, live or complete. */
 export async function fetchCounts(
   token: string,
   { orgId, logins }: Roster,
@@ -155,17 +151,6 @@ export async function fetchCounts(
   }
 
   return results;
-}
-
-export async function fetchContributions(
-  token: string,
-  org: string,
-  range: { from: string; to: string },
-  publicOnly = false,
-): Promise<Contributions[]> {
-  const roster = await fetchRoster(token, org, publicOnly);
-
-  return roster ? await fetchCounts(token, roster, range) : [];
 }
 
 function buildBatchQuery(size: number): string {

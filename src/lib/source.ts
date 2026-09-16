@@ -1,44 +1,15 @@
 import fixture from '../fixtures/boards.json';
 import type { Contributions } from './github/contributions';
-import { fetchContributions } from './github/contributions';
-import type { Viewer } from './github/token';
-import type { Period } from './periods';
-import { periodRange } from './periods';
 import type { WeekId } from './weeks';
-
-type OrgFixture = Partial<Record<Period, Contributions[]>> & {
-  weeks?: Record<WeekId, Contributions[]>;
-};
 
 type Fixture = {
   meta?: { roster: 'public' | 'full'; takenAt: string };
-  orgs?: Record<string, OrgFixture>;
+  orgs?: Record<string, { weeks?: Record<WeekId, Contributions[]> }>;
 };
 
 /**
- * With a token, live GitHub — restricted to public members, because the deployed
- * site must not be able to publish someone who hid their membership even if it is
- * handed a broader credential.
- *
- * Without a token, the local snapshot. That is how development runs, so no secret
- * has to sit on a developer's disk. `scripts/snapshot.ts` produces it through this
- * same `fetchContributions`, so its shape cannot drift from the real response.
- */
-export async function loadContributions(
-  viewer: Viewer | null,
-  org: string,
-  period: Period,
-): Promise<Contributions[]> {
-  if (viewer) {
-    return await fetchContributions(viewer.token, org, periodRange(period), true);
-  }
-
-  return (fixture as Fixture).orgs?.[org.toLowerCase()]?.[period] ?? [];
-}
-
-/**
- * The season's rounds from the snapshot, for the same reason `loadContributions`
- * exists: the ladder has to be developable without a token on disk.
+ * The season's rounds from the snapshot, so the ladder can be developed without a
+ * token on disk.
  *
  * A week the fixture does not carry is an empty round rather than a missing one.
  * `loadSeason` throws when it cannot fetch a week, because a ladder missing a
