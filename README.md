@@ -48,8 +48,18 @@ Deploys happen on a runner rather than a laptop on purpose: `src/fixtures/boards
 ## Scoring
 
 ```
-score = 5×PR + 3×review + 2×issue + 1×commit
+score = sum over categories of  weight × n / (n + k)
+
+           weight   k
+PR         5        2
+review     4        3
+issue      2        2
+commit     1        8
 ```
+
+Each category maxes out at its weight and reaches half of it at k, so the first
+contribution in a category counts for far more than the fiftieth: 0 to 2 commits
+earns 0.20 points, 20 to 40 earns 0.12.
 
 The weights live in `src/lib/score.ts` and are printed under the table on purpose. An opaque ranking of people reads as a judgement; a published formula reads as a game, which is what this is.
 

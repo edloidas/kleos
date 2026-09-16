@@ -22,7 +22,7 @@ function member(login: string, index: number, name: string | null = null): Score
     name,
     avatarUrl: `https://example.test/${login}.png`,
     overall: counts,
-    score: 100 - index,
+    score: 100 - index - 0.0256,
     ...counts,
   };
 }
@@ -91,21 +91,24 @@ describe('Leaderboard', () => {
       ['Reviews', '32'],
       ['Issues', '33'],
       ['Commits', '34'],
-      ['Score', '97'],
+      ['Score', '97.0'],
     ]);
   });
 
   it('shows the score on the podium', () => {
     render(<Leaderboard members={FIVE} />);
 
-    expect(podiumItems()[0]).toHaveTextContent('100 points');
+    // 99.9744 rounds up: a whole-number fixture could not tell rounding from truncation.
+    expect(podiumItems()[0]).toHaveTextContent('100.0 points');
   });
 
   it('prints the formula it ranks by', () => {
     render(<Leaderboard members={FIVE} />);
 
     expect(screen.getByText(/^Score =/).textContent?.replace(/\s+/g, ' ')).toBe(
-      'Score = 5×PR + 3×review + 2×issue + 1×commit.',
+      'Score = sum of weight × n / (n + k), over PRs (5/2), reviews (4/3), issues (2/2) and ' +
+        'commits (1/8). Each category maxes out at its weight and reaches half of it at k. ' +
+        'Scores are shown to one decimal; ranking uses the unrounded value.',
     );
   });
 
