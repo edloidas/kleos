@@ -29,96 +29,9 @@
 </div>
 
 <script>
-  import type { ShieldBadge } from './shield-badge';
+  import { enhanceMark } from './mark.client';
 
-  const container = document.querySelector<HTMLElement>('[data-shield]');
-  const shadow = document.querySelector<HTMLElement>('[data-shield-shadow]');
+  const root = document.querySelector<HTMLElement>('[data-shield]');
 
-  // three.js is 131 KB gzipped for a decoration, so the static medallion is what
-  // the page renders, and the module is fetched only for a visitor who will both
-  // see it move and be able to.
-  function wanted(): boolean {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-    if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return false;
-
-    try {
-      const probe = document.createElement('canvas');
-      return Boolean(probe.getContext('webgl2') ?? probe.getContext('webgl'));
-    } catch {
-      return false;
-    }
-  }
-
-  function whenIdle(run: () => void): void {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(run, { timeout: 2000 });
-    } else {
-      setTimeout(run, 1200);
-    }
-  }
-
-  function mount(root: HTMLElement, badge: ShieldBadge): void {
-    badge.ready.then(
-      () => {
-        root.dataset.ready = '';
-        root.tabIndex = 0;
-        root.ariaLabel =
-          'kleos shield. Drag or press the arrow keys to spin it, click or press Enter to stop or resume it.';
-      },
-      (error: unknown) => {
-        console.warn(error);
-        badge.dispose();
-      },
-    );
-
-    root.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        badge.toggleSpin();
-      }
-      if (event.key === 'ArrowLeft') badge.nudge(-3);
-      if (event.key === 'ArrowRight') badge.nudge(3);
-    });
-  }
-
-  function load(root: HTMLElement): void {
-    // Without WebGL the static medallion stays, so a failure here is not an error
-    // for the page.
-    import('./shield-badge')
-      .then(({ createShieldBadge }) => {
-        const badge = createShieldBadge(root, {
-          front: '/favicon-512.png',
-          back: '/shield-back.png',
-          thickness: 0.047,
-          dome: 0.067,
-          concave: 0.057,
-          onFrame({ angle, bob }) {
-            if (!shadow) return;
-            // The shadow narrows when the shield is edge-on and fades as it rises.
-            // Scaling it rather than resizing it keeps that off the layout path.
-            const narrow = 0.46 + 0.54 * Math.abs(Math.cos(angle));
-
-            shadow.style.transform = `scaleX(${narrow.toFixed(3)})`;
-            shadow.style.opacity = (0.75 - bob * 4).toFixed(3);
-          },
-        });
-
-        mount(root, badge);
-      })
-      .catch((error: unknown) => console.warn(error));
-  }
-
-  if (container && wanted()) {
-    whenIdle(() => {
-      // Scrolled past before the page went idle means it is never fetched at all.
-      const io = new IntersectionObserver((entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-
-        io.disconnect();
-        load(container);
-      });
-
-      io.observe(container);
-    });
-  }
+  if (root) enhanceMark(root, document.querySelector<HTMLElement>('[data-shield-shadow]'));
 </script>
