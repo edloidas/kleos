@@ -18,45 +18,68 @@ if (requestedOrg) {
   <Mark slot="header" />
 
   <div class="mx-auto max-w-md text-center">
-    <h1 class="font-display text-3xl leading-tight">Who carried the org?</h1>
-    <p class="mt-3 text-muted">
-      Enter a GitHub organization to see its contributors ranked by pull requests, reviews, issues
-      and commits.
-    </p>
-
-    <form method="get" action="/" class="mt-8 flex gap-2" data-org-form>
+    <form
+      method="get"
+      action="/"
+      class="pressed flex items-center rounded-2xl border border-line focus-within:ring-2 focus-within:ring-bronze"
+      data-form-type="other"
+      data-org-form
+    >
       <input
         type="text"
         name="org"
-        placeholder="enonic"
+        placeholder="Organization name"
         required
+        aria-label="GitHub organization"
         autocomplete="off"
-        class="flex-1 rounded-md border border-line bg-surface px-4 py-2 outline-none focus:border-bronze"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        data-1p-ignore
+        data-lpignore="true"
+        data-bwignore
+        data-form-type="other"
+        class="min-w-0 flex-1 bg-transparent py-3.5 pr-2 pl-5 text-ink outline-none placeholder:text-faint"
       />
       <button
         type="submit"
-        class="rounded-md bg-laurel px-5 py-2 font-medium text-ink hover:opacity-90"
+        class="mr-1.5 grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-line bg-veil text-ink shadow-raised-sm backdrop-blur-md transition-transform duration-150 outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-bronze active:scale-95 active:shadow-pressed-sm"
+        aria-label="Look up"
+        title="Look up"
       >
-        Look up
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          class="size-5 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
+        >
+          <path d="M5 12h14"></path>
+          <path d="m12 5 7 7-7 7"></path>
+        </svg>
       </button>
     </form>
 
     {
       orgs.length > 0 && (
-        <p class="mt-6 text-sm text-muted">
-          Enabled now:{' '}
-          {orgs.map((org, index) => (
-            <>
-              {index > 0 && ', '}
-              <a href={`/${org}`} class="text-bronze hover:underline">
-                {org}
-              </a>
-            </>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+          {orgs.map((org) => (
+            <a
+              href={`/${org}`}
+              class="raised cursor-pointer rounded-lg border border-line px-3 py-1.5 text-ink transition-[color,box-shadow,scale] duration-150 outline-none hover:text-ember focus-visible:text-ember focus-visible:ring-2 focus-visible:ring-bronze active:scale-[0.98] active:shadow-none"
+            >
+              {org}
+            </a>
           ))}
-        </p>
+        </div>
       )
     }
   </div>
+
+  <footer slot="footer" class="mt-16 text-center text-xs leading-relaxed text-muted">
+    <p>
+      Contributors are ranked by pull requests, reviews, issues and commits. Only public
+      contributions are counted.
+    </p>
+  </footer>
 
   <script>
     // The form has no server route of its own; it just navigates to /:org.

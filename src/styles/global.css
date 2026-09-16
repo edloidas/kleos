@@ -2,17 +2,76 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource/pt-serif/latin-400.css';
 
+/* The class is the resolved theme, not the stored mode — `system` is resolved
+   before paint. With no script, `color-scheme` alone still picks the right side
+   of every `light-dark()` pair below. */
+:root {
+  color-scheme: light dark;
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
 @theme {
-  --color-parchment: #f5f4f1;
-  --color-surface: #ffffff;
-  --color-line: #e3ded4;
-  --color-ink: #1c1a17;
-  --color-muted: #6e665a;
-  --color-laurel: #c9a227;
-  --color-bronze: #8a6a1f;
+  /* Every ramp is chroma 0; the gold is the only warmth on the page. */
+  --color-parchment: light-dark(oklch(0.997 0 0), oklch(0.218 0 0));
+  --color-surface: light-dark(oklch(1 0 0), oklch(0.265 0 0));
+  --color-sunken: light-dark(oklch(0.978 0 0), oklch(0.245 0 0));
+  /* For chrome that floats over content: surface with the page showing through. */
+  --color-veil: light-dark(oklch(1 0 0 / 0.72), oklch(0.265 0 0 / 0.72));
+  --color-line: light-dark(oklch(0.905 0 0), oklch(0.32 0 0));
+  --color-line-soft: light-dark(oklch(0.945 0 0), oklch(0.272 0 0));
+  --color-ink: light-dark(oklch(0.205 0 0), oklch(0.93 0 0));
+  --color-muted: light-dark(oklch(0.553 0 0), oklch(0.68 0 0));
+  /* A step past muted, for a hint rather than content: below the contrast
+     body text needs, so nothing a visitor has to read may use it. */
+  --color-faint: light-dark(oklch(0.72 0 0), oklch(0.5 0 0));
+  --color-laurel: light-dark(oklch(0.728 0.138 89.7), oklch(0.784 0.138 91.6));
+  --color-bronze: light-dark(oklch(0.543 0.098 84.4), oklch(0.752 0.132 88.1));
+  /* The one hot colour, for a hover the neutral ramps cannot express. */
+  --color-ember: light-dark(oklch(0.579 0.224 28.5), oklch(0.66 0.21 28.5));
+  /* The fill is gold in both themes, so what sits on it does not flip. */
+  --color-on-laurel: oklch(0.205 0 0);
+
+  --shadow-raised:
+    -3px -3px 7px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.035)),
+    3px 4px 10px light-dark(oklch(0.72 0 0 / 0.35), oklch(0 0 0 / 0.5));
+  --shadow-raised-sm:
+    -1px -1px 3px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.03)),
+    1px 2px 5px light-dark(oklch(0.72 0 0 / 0.32), oklch(0 0 0 / 0.45));
+  --shadow-pressed:
+    inset 2px 3px 6px light-dark(oklch(0.72 0 0 / 0.4), oklch(0 0 0 / 0.55)),
+    inset -2px -2px 5px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.035));
+  --shadow-pressed-sm:
+    inset 1px 2px 4px light-dark(oklch(0.72 0 0 / 0.35), oklch(0 0 0 / 0.5)),
+    inset -1px -1px 3px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.03));
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'PT Serif', 'Iowan Old Style', Palatino, Georgia, serif;
+}
+
+/* Not colours, so `light-dark()` cannot carry them: the dark case needs the
+   forced class and the unresolved system preference spelled out separately. */
+:root {
+  --grain-opacity: 0.18;
+  --grain-blend: multiply;
+}
+
+:root.dark {
+  --grain-opacity: 0.07;
+  --grain-blend: overlay;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --grain-opacity: 0.07;
+    --grain-blend: overlay;
+  }
 }
 
 /* Stretches a single line to the width of its container, which is how the motto
@@ -22,11 +81,50 @@
   text-align-last: justify;
 }
 
+/** A card, a button or a badge: the page's colour, lifted off it by shadow alone. */
+@utility raised {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+/** The inverse — an input or a selected control, pushed into the page. */
+@utility pressed {
+  background-color: var(--color-sunken);
+  box-shadow: var(--shadow-pressed);
+}
+
+/* One board view scrolls and the other does not; without a reserved gutter the
+   viewport changes width between them and centred chrome jumps sideways. */
 html {
-  color-scheme: light;
+  scrollbar-gutter: stable;
 }
 
 body {
   background-color: var(--color-parchment);
   color: var(--color-ink);
+}
+
+/* Above the content, so a card and the page under it take the same grain; fixed
+   to the viewport, so the grain holds still while the page scrolls. */
+body::after {
+  content: '';
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  background-image: url('/paper-texture.webp');
+  background-repeat: repeat;
+  background-size: 100px 100px;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+  pointer-events: none;
+}
+
+/* The theme script is what puts `data-theme` on the root, so its absence means
+   the toggle has nothing to toggle. */
+:root:not([data-theme]) [data-theme-toggle] {
+  display: none;
+}
+
+::selection {
+  background-color: --alpha(var(--color-laurel) / 35%);
 }

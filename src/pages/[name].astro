@@ -1,5 +1,6 @@
 ---
 import { MonthLadder } from '../components/MonthLadder';
+import PeriodSwitch from '../components/PeriodSwitch.astro';
 import Waitlist from '../components/Waitlist.astro';
 import { WeekStandings } from '../components/WeekStandings';
 import Base from '../layouts/Base.astro';
@@ -12,7 +13,7 @@ import { MAX_MEMBERS, MIN_MEMBERS } from '../lib/roster';
 import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, START_RATING } from '../lib/rating';
 import { routeFor, routeForAccount } from '../lib/route';
 import { HALF_AT, WEIGHTS } from '../lib/score';
-import { VIEWS, parseView } from '../lib/views';
+import { parseView } from '../lib/views';
 
 const name = Astro.params.name!;
 const view = parseView(Astro.url.searchParams.get('period'));
@@ -68,9 +69,11 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
     ? undefined
     : `Who carried ${name}? Contributors ranked by pull requests, reviews, issues and commits.`}
 >
+  {route.kind === 'board' && <PeriodSwitch slot="toolbar" name={name} view={view} />}
+
   {
     notFound ? (
-      <section class="max-w-prose">
+      <section class="mt-4 max-w-prose">
         <h1 class="font-display text-4xl">Not found</h1>
         <p class="mt-4 text-muted">
           kleos has no page for <strong class="text-ink">{name}</strong>.
@@ -78,25 +81,9 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
       </section>
     ) : (
       <Fragment>
-        <h1 class="font-display text-4xl">{name}</h1>
+        <h1 class="mt-4 font-display text-4xl">{name}</h1>
 
-        {route.kind === 'board' && (
-          <nav class="mt-4 flex gap-2 text-sm">
-            {VIEWS.map((value) => (
-              <a
-                href={`/${name}?period=${value}`}
-                class:list={[
-                  'rounded-md border px-3 py-1',
-                  value === view ? 'border-bronze text-bronze' : 'border-line text-muted',
-                ]}
-              >
-                {value}
-              </a>
-            ))}
-          </nav>
-        )}
-
-        <div class="mt-8">
+        <div class="mt-6">
           {route.kind === 'not-enabled' && <Waitlist org={name} requested={requested} />}
           {error && <p class="text-muted">{error}</p>}
 
@@ -146,7 +133,7 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
         </div>
 
         {board && !board.limit && (
-          <div class="mt-16 space-y-2 border-t border-line pt-6 text-xs text-muted">
+          <div class="mt-16 space-y-2 border-t border-line-soft pt-6 text-xs text-muted">
             <p>
               Weekly points = sum of weight × n / (n + k), over PRs ({WEIGHTS.pullRequests}/
               {HALF_AT.pullRequests}), reviews ({WEIGHTS.reviews}/{HALF_AT.reviews}), issues (

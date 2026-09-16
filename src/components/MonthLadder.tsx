@@ -23,7 +23,7 @@ export function MonthLadder({ month }: { month: MonthView }) {
   return (
     <div className="space-y-10">
       {month.ranked.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-2xl border border-line-soft raised px-4 py-1">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line text-muted">
               <tr>
@@ -53,7 +53,7 @@ export function MonthLadder({ month }: { month: MonthView }) {
         <div>
           <h3 className="text-sm text-muted">Unranked — fewer than {MIN_ROUNDS} rounds played</h3>
 
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-line-soft raised px-4 py-1">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-line text-muted">
                 <tr>
@@ -64,7 +64,7 @@ export function MonthLadder({ month }: { month: MonthView }) {
               </thead>
               <tbody>
                 {month.unranked.map((entry) => (
-                  <tr key={entry.login} className="border-b border-line/60">
+                  <tr key={entry.login} className="border-b border-line-soft">
                     <td className="py-2 pr-4">
                       <a href={`https://github.com/${entry.login}`} className="hover:underline">
                         {entry.name ?? entry.login}
@@ -87,7 +87,7 @@ export function MonthLadder({ month }: { month: MonthView }) {
 
 function Row({ entry, place }: { entry: LadderRow; place: number }) {
   return (
-    <tr className="border-b border-line/60">
+    <tr className="border-b border-line-soft">
       <td className="py-2 pr-4 text-muted">{place}</td>
       <td className="py-2 pr-4">
         <a href={`https://github.com/${entry.login}`} className="hover:underline">

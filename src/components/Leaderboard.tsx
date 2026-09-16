@@ -37,7 +37,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
         ))}
       </ol>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-2xl border border-line-soft raised px-4 py-1">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line text-muted">
             <tr>
@@ -52,7 +52,7 @@ export function Leaderboard({ members }: { members: ScoredMember[] }) {
           </thead>
           <tbody>
             {rest.map((member, index) => (
-              <tr key={member.login} className="border-b border-line/60">
+              <tr key={member.login} className="border-b border-line-soft">
                 <td className="py-2 pr-4 text-muted">{index + 4}</td>
                 <td className="py-2 pr-4">
                   <a href={`https://github.com/${member.login}`} className="hover:underline">
