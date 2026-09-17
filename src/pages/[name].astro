@@ -1,6 +1,7 @@
 ---
 import { MonthLadder } from '../components/MonthLadder';
 import PeriodSwitch from '../components/PeriodSwitch.astro';
+import { MonthPodium, WeekPodium } from '../components/Podium';
 import Waitlist from '../components/Waitlist.astro';
 import { WeekStandings } from '../components/WeekStandings';
 import Base from '../layouts/Base.astro';
@@ -129,6 +130,7 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
                     : `running · through ${day.format(new Date(board.week.through))}`}
                 </span>
               </div>
+              <WeekPodium standings={board.week.standings} />
               <WeekStandings standings={board.week.standings} />
             </div>
           )}
@@ -142,6 +144,7 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
                   {board.month.provisionalRound && ' Ratings include this week so far.'}
                 </p>
               </div>
+              <MonthPodium ranked={board.month.ranked} />
               <MonthLadder month={board.month} />
             </div>
           )}

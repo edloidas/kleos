@@ -53,15 +53,22 @@ describe('WeekStandings', () => {
     expect(cells).toEqual(['1', 'ADA', '1', '2', '3', '4', '9.97', '+5.0']);
   });
 
-  it('keeps the rating midrank of a tie rather than rounding it to a place', () => {
+  it('prints a tie as one shared place and skips the place it covers', () => {
+    // `place` still carries the midrank the rating is scored on; the column no
+    // longer reads it, so a stale 1.5 here must not reach the page.
     render(
       <WeekStandings
-        standings={[standing('ada', 0, { place: 1.5 }), standing('bob', 1, { place: 1.5 })]}
+        standings={[
+          standing('ada', 0, { points: 9, place: 1.5 }),
+          standing('bob', 1, { points: 9, place: 1.5 }),
+          standing('cy', 2, { points: 4, place: 3 }),
+        ]}
       />,
     );
 
-    expect(within(row('ada')).getAllByRole('cell')[0]).toHaveTextContent('1.5');
-    expect(within(row('bob')).getAllByRole('cell')[0]).toHaveTextContent('1.5');
+    const place = (login: string) => within(row(login)).getAllByRole('cell')[0]!.textContent;
+
+    expect([place('ada'), place('bob'), place('cy')]).toEqual(['1', '1', '3']);
   });
 
   it('signs a rating change in both directions', () => {
