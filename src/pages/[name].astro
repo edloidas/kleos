@@ -2,6 +2,7 @@
 import { MonthLadder } from '../components/MonthLadder';
 import PeriodSwitch from '../components/PeriodSwitch.astro';
 import { MonthPodium, WeekPodium } from '../components/Podium';
+import { Spotlight } from '../components/Spotlight';
 import Waitlist from '../components/Waitlist.astro';
 import { WeekStandings } from '../components/WeekStandings';
 import Base from '../layouts/Base.astro';
@@ -132,6 +133,13 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
                 </span>
               </div>
               <WeekPodium standings={board.week.standings} />
+
+              {board.week.spotlight.length > 0 && (
+                <section class="space-y-3 pt-4">
+                  <h3 class="text-center font-display text-lg">Spotlight</h3>
+                  <Spotlight highlights={board.week.spotlight} />
+                </section>
+              )}
 
               <section class="space-y-3 pt-4">
                 <h3 class="text-center font-display text-lg">Weekly leaderboard</h3>
