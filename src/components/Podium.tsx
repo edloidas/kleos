@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { LadderRow, Standing } from '../lib/board';
 import type { Slot } from '../lib/podium';
 import { competitionPlaces, podium } from '../lib/podium';
+import { Avatar } from './Avatar';
 
 /**
  * The three cards above the table. Decoration over data the table already carries,
@@ -142,7 +143,10 @@ function Card({
         {slot.shared && <span className="sr-only">tied</span>}
       </span>
 
-      <Avatar member={member} lead={lead} stepped={stepped} />
+      <Avatar
+        src={member.avatarUrl}
+        className={`${avatarSize(lead, stepped)} ${stepped ? 'sm:order-1' : ''}`}
+      />
 
       <div className={`min-w-0 flex-1 ${stepped ? 'sm:order-3 sm:w-full sm:flex-none' : ''}`}>
         <a
@@ -182,24 +186,13 @@ function Card({
   );
 }
 
-function Avatar({ member, lead, stepped }: { member: Entry; lead: boolean; stepped: boolean }) {
-  const size = lead
-    ? stepped
-      ? 'size-9 sm:size-16'
-      : 'size-9 sm:size-11'
-    : stepped
-      ? 'size-9 sm:size-12'
-      : 'size-9';
-  const classes = `${size} ${
-    stepped ? 'sm:order-1' : ''
-  } shrink-0 rounded-full border border-line-soft bg-sunken object-cover`;
+/** The lead is the largest face on a stepped podium and only slightly larger on a row of three. */
+function avatarSize(lead: boolean, stepped: boolean): string {
+  if (lead) {
+    return stepped ? 'size-9 sm:size-16' : 'size-9 sm:size-11';
+  }
 
-  // A member the last round never named has no avatar; an empty ring beats a broken image.
-  return member.avatarUrl ? (
-    <img src={member.avatarUrl} alt="" loading="lazy" className={classes} />
-  ) : (
-    <span className={classes} aria-hidden="true" />
-  );
+  return stepped ? 'size-9 sm:size-12' : 'size-9';
 }
 
 function Frame({ stepped, children }: { stepped: boolean; children: ReactNode }) {

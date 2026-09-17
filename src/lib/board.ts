@@ -11,6 +11,8 @@ import { score } from './score';
 import { loadSeason } from './season';
 import type { Season } from './season';
 import { loadSeasonFixture } from './source';
+import type { Highlight } from './spotlight';
+import { spotlight } from './spotlight';
 import type { WeekId } from './weeks';
 import {
   hasCompletedDay,
@@ -41,6 +43,8 @@ export type WeekView = {
   complete: boolean;
   standings: Standing[];
   badges: Award[];
+  /** The badge holders the podium does not show, as the spotlight row prints them. */
+  spotlight: Highlight[];
 };
 
 /**
@@ -316,6 +320,8 @@ function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date, weeks: W
   // behind it.
   const before = weeks[weeks.indexOf(id) - 1];
 
+  const badges = awardBadges(standings, before ? (rounds.get(before) ?? null) : null);
+
   return {
     id,
     number: Number(id.slice(-2)),
@@ -324,6 +330,7 @@ function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date, weeks: W
     through: lastCompletedInstant(now).toISOString(),
     complete: isComplete(id, now),
     standings,
-    badges: awardBadges(standings, before ? (rounds.get(before) ?? null) : null),
+    badges,
+    spotlight: spotlight(standings, badges),
   };
 }
