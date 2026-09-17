@@ -1,3 +1,5 @@
+import type { Award } from './badges';
+import { awardBadges } from './badges';
 import { withoutExcluded } from './exclusions';
 import type { Contributions } from './github/contributions';
 import type { Viewer } from './github/token';
@@ -38,6 +40,7 @@ export type WeekView = {
   through: string;
   complete: boolean;
   standings: Standing[];
+  badges: Award[];
 };
 
 /**
@@ -129,7 +132,7 @@ export async function getBoard(
 
   return {
     org,
-    week: weekView(week, rounds, weekTable, now),
+    week: weekView(week, rounds, weekTable, now, weekWeeks),
     month: {
       start: month.toISOString(),
       rounds: roundsPlayed(table),
@@ -221,7 +224,7 @@ function refused(org: string, week: WeekId, month: Date, cause: RosterSizeError,
 
   return {
     org,
-    week: weekView(week, new Map(), empty, now),
+    week: weekView(week, new Map(), empty, now, []),
     month: {
       start: month.toISOString(),
       rounds: 0,
@@ -281,7 +284,7 @@ function withIdentity(entry: LadderEntry, named: Map<string, Contributions>): La
  * from the season, the place and the delta from the rating that scored it, so the
  * two numbers on a row can never disagree.
  */
-function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date): WeekView {
+function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date, weeks: WeekId[]): WeekView {
   const start = weekStartOf(id);
   const results = new Map(
     [...table.ranked, ...table.unranked].flatMap((entry) => {
@@ -307,6 +310,12 @@ function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date): WeekVie
       };
     });
 
+  // The round before this one in the week's own season, which is not always the
+  // month's: a badge measured against the wrong season would compare a member to a
+  // week the view never shows. Absent for the season's first round, which has nothing
+  // behind it.
+  const before = weeks[weeks.indexOf(id) - 1];
+
   return {
     id,
     number: Number(id.slice(-2)),
@@ -315,5 +324,6 @@ function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date): WeekVie
     through: lastCompletedInstant(now).toISOString(),
     complete: isComplete(id, now),
     standings,
+    badges: awardBadges(standings, before ? (rounds.get(before) ?? null) : null),
   };
 }

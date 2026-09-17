@@ -6,6 +6,7 @@ import Waitlist from '../components/Waitlist.astro';
 import { WeekStandings } from '../components/WeekStandings';
 import Base from '../layouts/Base.astro';
 import { resolveAccount } from '../lib/account';
+import { BADGE_FLOOR, MAX_BADGES } from '../lib/badges';
 import { getBoard } from '../lib/board';
 import { GitHubError } from '../lib/github/client';
 import { resolveViewer } from '../lib/github/token';
@@ -134,7 +135,7 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
 
               <section class="space-y-3 pt-4">
                 <h3 class="text-center font-display text-lg">Weekly leaderboard</h3>
-                <WeekStandings standings={board.week.standings} />
+                <WeekStandings standings={board.week.standings} badges={board.week.badges} />
               </section>
             </div>
           )}
@@ -169,6 +170,14 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
               Rating moves by {K_FACTOR} × (expected place − actual place) / (players − 1), so beating
               the place your rating predicts gains you points; {MIN_ROUNDS} rounds are needed to be
               ranked.
+            </p>
+            <p>
+              Up to {MAX_BADGES} badges a week, one per member. PR Machine, Gatekeeper, Scout and
+              Workhorse go to whoever leads pull requests, reviews, issues or commits outright with
+              at least {BADGE_FLOOR} of it. All-Rounder goes to the member with {BADGE_FLOOR} or
+              more in every category whose weakest category is the strongest; Riser to the largest
+              gain since last week. A lead nobody holds alone is not awarded, and a badge is never
+              passed to a runner-up.
             </p>
             <p>Only public members and their public contributions are counted.</p>
           </div>

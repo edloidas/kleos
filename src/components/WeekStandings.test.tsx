@@ -116,4 +116,36 @@ describe('WeekStandings', () => {
       'https://github.com/ada',
     );
   });
+
+  it('puts a badge beside its holder and leaves everyone else bare', () => {
+    render(
+      <WeekStandings
+        standings={[standing('ada', 0), standing('bob', 1)]}
+        badges={[{ kind: 'reviews', login: 'ada' }]}
+      />,
+    );
+
+    expect(within(row('ada')).getByText('Gatekeeper')).toBeInTheDocument();
+    expect(within(row('bob')).queryByText('Gatekeeper')).not.toBeInTheDocument();
+  });
+
+  it('renders no badge when the round awarded none', () => {
+    render(<WeekStandings standings={[standing('ada', 0)]} />);
+
+    expect(screen.queryByText('Gatekeeper')).not.toBeInTheDocument();
+    expect(screen.queryByText('PR Machine')).not.toBeInTheDocument();
+  });
+
+  it('spells the badge out for a reader who never sees the tooltip', () => {
+    render(
+      <WeekStandings
+        standings={[standing('ada', 0)]}
+        badges={[{ kind: 'allRounder', login: 'ada' }]}
+      />,
+    );
+
+    expect(within(row('ada')).getByTitle(/strongest weakest category/i)).toHaveTextContent(
+      /All-Rounder — Strongest weakest category/i,
+    );
+  });
 });
