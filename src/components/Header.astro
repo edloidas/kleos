@@ -1,20 +1,22 @@
 ---
-// Sticky, not fixed: in flow it reserves its own height, and it still floats over
-// the content that scrolls under it.
 const control =
   'pointer-events-auto flex size-11 cursor-pointer items-center justify-center rounded-2xl border border-line bg-veil text-ink shadow-raised-sm backdrop-blur-md transition-transform duration-150 outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-bronze active:scale-95 active:shadow-pressed-sm [&_svg]:size-5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]';
 
-// The front page has nowhere to go home to, so an empty cell holds the toggle on
-// the right.
+// The front page has nowhere to go home to.
 const atHome = Astro.url.pathname === '/';
 ---
 
-<div class="pointer-events-none sticky top-0 z-50 flex items-center justify-between gap-3 pt-3 sm:py-5">
+<!-- The row is what reserves the controls' height, since they no longer stand in
+  flow themselves; their offsets repeat the padding the row sits in. -->
+<div class="flex min-h-11 items-center justify-center pt-3.5 sm:pb-5">
   {
-    atHome ? (
-      <span class="size-11" aria-hidden="true" />
-    ) : (
-      <a href="/" class={control} aria-label="Home" title="Home">
+    !atHome && (
+      <a
+        href="/"
+        class={`${control} fixed top-3.5 left-4 z-50`}
+        aria-label="Home"
+        title="Home"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
           <path
@@ -29,7 +31,7 @@ const atHome = Astro.url.pathname === '/';
 
   <button
     type="button"
-    class={control}
+    class={`${control} fixed top-3.5 right-4 z-50`}
     aria-label="Switch theme"
     title="Switch theme"
     data-theme-toggle

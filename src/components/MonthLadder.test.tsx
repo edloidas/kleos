@@ -42,7 +42,7 @@ describe('MonthLadder', () => {
     expect(screen.getByText(/no rounds have been played/i)).toBeInTheDocument();
   });
 
-  it('rounds the rating for display and places by ladder order', () => {
+  it('numbers the rows and formats the rating and the delta for display', () => {
     render(
       <MonthLadder
         month={view({
@@ -57,7 +57,6 @@ describe('MonthLadder', () => {
     expect(
       within(row('ada'))
         .getAllByRole('cell')
-        .slice(0, 4)
         .map((c) => c.textContent),
     ).toEqual(['1', 'ADA', '1035', '+11.2']);
     expect(within(row('bob')).getAllByRole('cell')[2]).toHaveTextContent('1019');
@@ -81,38 +80,52 @@ describe('MonthLadder', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('separates the unranked from the ladder and shows what they are short of', () => {
+  it('names the unranked in a note rather than a second table', () => {
     render(
       <MonthLadder
         month={view({
           ranked: [entry('ada')],
-          unranked: [entry('new', { roundsPlayed: 2, lastActiveWeek: '2026-W37' })],
+          unranked: [entry('new', { roundsPlayed: 2 }), entry('idle', { roundsPlayed: 1 })],
         })}
       />,
     );
 
-    expect(screen.getByText(/unranked/i)).toBeInTheDocument();
-
-    const cells = within(row('new'))
-      .getAllByRole('cell')
-      .map((cell) => cell.textContent);
-
-    expect(cells).toEqual(['NEW', '2', 'Week 37']);
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(screen.getByText(/rounds played:/).textContent).toBe(
+      'Unranked, under 3 rounds played: NEW, IDLE.',
+    );
+    expect(screen.getByRole('link', { name: 'NEW' })).toHaveAttribute(
+      'href',
+      'https://github.com/new',
+    );
   });
 
   it('says the ladder is unranked when nobody has played enough rounds', () => {
     render(<MonthLadder month={view({ unranked: [entry('new', { roundsPlayed: 1 })] })} />);
 
     expect(screen.getByText(/nobody has played 3 rounds yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('dashes a last-active week that does not exist', () => {
+  // jsdom computes no colours, so the utility class is the rendered semantic here.
+  it('colours a rating change by its direction, and a round that moved nothing as neither', () => {
     render(
       <MonthLadder
-        month={view({ unranked: [entry('idle', { roundsPlayed: 0, lastActiveWeek: null })] })}
+        month={view({
+          ranked: [
+            entry('up', { lastDelta: 11.24 }),
+            entry('down', { lastDelta: -11.24 }),
+            entry('flat', { lastDelta: 0 }),
+          ],
+        })}
       />,
     );
 
-    expect(within(row('idle')).getAllByRole('cell').at(-1)).toHaveTextContent('—');
+    const cell = (login: string) => within(row(login)).getAllByRole('cell')[3]!;
+
+    expect(cell('up')).toHaveClass('text-gain');
+    expect(cell('down')).toHaveClass('text-loss');
+    expect(cell('flat')).toHaveTextContent('+0.0');
+    expect(cell('flat')).toHaveClass('text-muted');
   });
 });
