@@ -11,7 +11,7 @@ import { resolveViewer } from '../lib/github/token';
 import { mayLookUp } from '../lib/limit';
 import { excludedLogins, isSupported } from '../lib/orgs';
 import { MAX_MEMBERS, MIN_MEMBERS } from '../lib/roster';
-import { K_FACTOR, LADDER_VERSION, MIN_ROUNDS, START_RATING } from '../lib/rating';
+import { K_FACTOR, MIN_ROUNDS } from '../lib/rating';
 import { routeFor, routeForAccount } from '../lib/route';
 import { HALF_AT, WEIGHTS } from '../lib/score';
 import { parseView } from '../lib/views';
@@ -87,7 +87,14 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
       </section>
     ) : (
       <Fragment>
-        <h1 class="mt-4 font-display text-4xl">{name}</h1>
+        <h1 class="mt-4 text-center font-display text-4xl">
+          <a
+            href={`https://github.com/${name}`}
+            class="transition-colors duration-150 hover:text-ember hover:underline"
+          >
+            {name}
+          </a>
+        </h1>
 
         <div class="mt-6">
           {route.kind === 'not-enabled' && <Waitlist org={name} requested={requested} />}
@@ -109,61 +116,51 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
 
           {board && !board.limit && view === 'week' && (
             <div class="space-y-4">
-              <h2 class="font-display text-2xl">
-                Week {board.week.number}{' '}
-                <span class="text-muted">
-                  ({day.format(new Date(board.week.from))} – {day.format(new Date(board.week.to))})
+              <div class="text-center">
+                <h2 class="font-display text-2xl">
+                  Week {board.week.number}{' '}
+                  <span class="text-muted">
+                    ({day.format(new Date(board.week.from))} – {day.format(new Date(board.week.to))})
+                  </span>
+                </h2>
+                <span class="mt-2 inline-block rounded-full border border-line px-2 py-0.5 text-xs text-muted">
+                  {board.week.complete
+                    ? 'final'
+                    : `running · through ${day.format(new Date(board.week.through))}`}
                 </span>
-              </h2>
-              <p class="text-sm text-muted">
-                Counts run through {day.format(new Date(board.week.through))}
-                {board.week.complete ? ', the last day of the round' : ' — the round is still running'}.
-              </p>
+              </div>
               <WeekStandings standings={board.week.standings} />
             </div>
           )}
 
           {board && !board.limit && view === 'month' && (
             <div class="space-y-4">
-              <h2 class="font-display text-2xl">
-                {monthName.format(new Date(board.month.start))}{' '}
-                <span class="text-sm text-muted">formula {LADDER_VERSION}</span>
-              </h2>
-              <p class="text-sm text-muted">
-                {board.month.rounds} {board.month.rounds === 1 ? 'round' : 'rounds'} played.
-                {board.month.provisionalRound && ' Ratings include this week so far.'}
-              </p>
+              <div class="text-center">
+                <h2 class="font-display text-2xl">{monthName.format(new Date(board.month.start))}</h2>
+                <p class="mt-2 text-sm text-muted">
+                  {board.month.rounds} {board.month.rounds === 1 ? 'round' : 'rounds'} played.
+                  {board.month.provisionalRound && ' Ratings include this week so far.'}
+                </p>
+              </div>
               <MonthLadder month={board.month} />
             </div>
           )}
         </div>
 
         {board && !board.limit && (
-          <div class="mt-16 space-y-2 border-t border-line-soft pt-6 text-xs text-muted">
+          <div class="mt-16 space-y-1.5 border-t border-line-soft pt-6 text-[0.6875rem] leading-relaxed text-muted">
             <p>
               Weekly points = sum of weight × n / (n + k), over PRs ({WEIGHTS.pullRequests}/
               {HALF_AT.pullRequests}), reviews ({WEIGHTS.reviews}/{HALF_AT.reviews}), issues (
-              {WEIGHTS.issues}/{HALF_AT.issues}) and commits ({WEIGHTS.commits}/{HALF_AT.commits}). Each
-              category maxes out at its weight and reaches half of it at k.
+              {WEIGHTS.issues}/{HALF_AT.issues}) and commits ({WEIGHTS.commits}/{HALF_AT.commits}).
             </p>
             <p>
-              Rating moves by {K_FACTOR} × (expected place − actual place) / (players − 1), so finishing
-              above the place your rating predicts gains you points, and {MIN_ROUNDS} rounds are needed
-              to be ranked.
+              Rating moves by {K_FACTOR} × (expected place − actual place) / (players − 1), so beating
+              the place your rating predicts gains you points; {MIN_ROUNDS} rounds are needed to be
+              ranked.
             </p>
-            <p>
-              A season is a calendar month whose rounds are the ISO weeks with a Thursday inside it, and
-              every rating resets to {START_RATING} when one starts.
-            </p>
-            <p>
-              Only members who have made their organization membership public are listed, and only their
-              public contributions are counted.
-            </p>
+            <p>Only public members and their public contributions are counted.</p>
           </div>
-        )}
-
-        {board && !board.live && (
-          <p class="mt-8 text-xs text-muted">Snapshot data — no GitHub token in this environment.</p>
         )}
       </Fragment>
     )

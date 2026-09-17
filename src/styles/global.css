@@ -35,6 +35,10 @@
   --color-bronze: light-dark(oklch(0.543 0.098 84.4), oklch(0.752 0.132 88.1));
   /* The one hot colour, for a hover the neutral ramps cannot express. */
   --color-ember: light-dark(oklch(0.579 0.224 28.5), oklch(0.66 0.21 28.5));
+  /* A rating moved up or down. Only these two carry meaning by colour, so they
+     are the one pair a reader may not tell apart by shape alone. */
+  --color-gain: light-dark(oklch(0.52 0.15 149), oklch(0.76 0.16 151));
+  --color-loss: light-dark(oklch(0.545 0.19 25), oklch(0.72 0.17 25));
   /* The fill is gold in both themes, so what sits on it does not flip. */
   --color-on-laurel: oklch(0.205 0 0);
 
@@ -47,6 +51,9 @@
   --shadow-pressed:
     inset 2px 3px 6px light-dark(oklch(0.72 0 0 / 0.4), oklch(0 0 0 / 0.55)),
     inset -2px -2px 5px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.035));
+  /* Shade half of the pressed pair, cast outward: a piece proud in a recess casts
+     the same shadow that lights it. A raised pair here would clash with the track's inset. */
+  --shadow-island: 2px 3px 6px light-dark(oklch(0.72 0 0 / 0.35), oklch(0 0 0 / 0.5));
   --shadow-pressed-sm:
     inset 1px 2px 4px light-dark(oklch(0.72 0 0 / 0.35), oklch(0 0 0 / 0.5)),
     inset -1px -1px 3px light-dark(oklch(1 0 0), oklch(1 0 0 / 0.03));

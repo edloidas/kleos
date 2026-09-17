@@ -82,6 +82,25 @@ describe('WeekStandings', () => {
     expect(within(row('ada')).getAllByRole('cell').at(-1)).toHaveTextContent('+0.0');
   });
 
+  // jsdom computes no colours, so the utility class is the rendered semantic here.
+  it('colours a rating change by its direction, and a round that moved nothing as neither', () => {
+    render(
+      <WeekStandings
+        standings={[
+          standing('up', 0, { delta: 11.24 }),
+          standing('down', 1, { delta: -11.24 }),
+          standing('flat', 2, { delta: 0 }),
+        ]}
+      />,
+    );
+
+    const cell = (login: string) => within(row(login)).getAllByRole('cell').at(-1)!;
+
+    expect(cell('up')).toHaveClass('text-gain');
+    expect(cell('down')).toHaveClass('text-loss');
+    expect(cell('flat')).toHaveClass('text-muted');
+  });
+
   it('falls back to the login when a member has no display name', () => {
     render(<WeekStandings standings={[standing('ada', 0, { name: null })]} />);
 

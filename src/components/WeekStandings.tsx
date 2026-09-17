@@ -9,6 +9,13 @@ function delta(value: number): string {
   return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`;
 }
 
+/** A round that moved nothing is not a gain, so it stays off the two meaning colours. */
+function deltaColor(value: number): string {
+  if (value === 0) return 'text-muted';
+
+  return value > 0 ? 'text-gain' : 'text-loss';
+}
+
 /**
  * The round's table. Server-rendered like `Leaderboard`, and a React component for
  * the same reason: sorting is a `client:load` away rather than a rewrite.
@@ -35,10 +42,13 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
         </thead>
         <tbody>
           {standings.map((member) => (
-            <tr key={member.login} className="border-b border-line-soft">
+            <tr key={member.login} className="border-b border-line-soft last:border-0">
               <td className="py-2 pr-4 text-muted">{place(member.place)}</td>
               <td className="py-2 pr-4">
-                <a href={`https://github.com/${member.login}`} className="hover:underline">
+                <a
+                  href={`https://github.com/${member.login}`}
+                  className="transition-colors duration-150 hover:text-ember hover:underline"
+                >
                   {member.name ?? member.login}
                 </a>
               </td>
@@ -47,7 +57,7 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
               <td className="py-2 pr-4 text-right">{member.issues}</td>
               <td className="py-2 pr-4 text-right">{member.commits}</td>
               <td className="py-2 pr-4 text-right text-bronze">{member.points.toFixed(2)}</td>
-              <td className={`py-2 text-right ${member.delta >= 0 ? 'text-ink' : 'text-muted'}`}>
+              <td className={`py-2 text-right ${deltaColor(member.delta)}`}>
                 {delta(member.delta)}
               </td>
             </tr>

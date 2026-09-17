@@ -16,13 +16,13 @@ const width = `calc(${100 / VIEWS.length}% - 0.25rem)`;
 ---
 
 <div
-  class="pointer-events-auto pressed relative grid h-10 grid-cols-2 rounded-xl border border-line p-1 text-sm"
+  class="pressed relative grid h-10 w-full max-w-40 grid-cols-2 rounded-xl border border-line p-1 text-sm"
   role="group"
   aria-label="Period"
   data-period-switch
 >
   <span
-    class="raised absolute top-1 bottom-1 left-1 rounded-lg border border-line transition-transform duration-300 ease-out"
+    class="shadow-island absolute top-1 bottom-1 left-1 rounded-lg border border-line bg-surface transition-transform duration-300 ease-out"
     style={{ width, transform: `translateX(${index * 100}%)` }}
     aria-hidden="true"
     data-period-island
