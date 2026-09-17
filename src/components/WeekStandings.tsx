@@ -1,9 +1,5 @@
 import type { Standing } from '../lib/board';
-
-/** Midranks are halves on a tie, so 2.5 has to survive to the page as "2.5". */
-function place(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
+import { competitionPlaces } from '../lib/podium';
 
 function delta(value: number): string {
   return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`;
@@ -25,6 +21,10 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
     return <p className="text-muted">Nobody has been active in this round yet.</p>;
   }
 
+  // The podium derives its places the same way from the same points, so the two cannot
+  // disagree. `Standing.place` stays the midrank the rating is scored on.
+  const places = competitionPlaces(standings.map((member) => member.points));
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-line-soft raised px-4 py-1">
       <table className="w-full text-left text-sm">
@@ -41,9 +41,9 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
           </tr>
         </thead>
         <tbody>
-          {standings.map((member) => (
+          {standings.map((member, index) => (
             <tr key={member.login} className="border-b border-line-soft last:border-0">
-              <td className="py-2 pr-4 text-muted">{place(member.place)}</td>
+              <td className="py-2 pr-4 text-muted">{places[index]}</td>
               <td className="py-2 pr-4">
                 <a
                   href={`https://github.com/${member.login}`}
