@@ -51,6 +51,17 @@ function placesShown() {
   return cards().map((node) => node.querySelector('[data-place]')!.getAttribute('data-place'));
 }
 
+/** Marked rather than found by position: a card's last child is markup, not a contract. */
+function score(login: string) {
+  return card(login).querySelector<HTMLElement>('[data-score]')!;
+}
+
+/** Classes with no variant prefix. The stepped podium's emphasis is all behind `sm:`, so
+ *  dropping the prefixed ones leaves the card as a narrow screen draws it. */
+function unprefixed(node: Element) {
+  return node.className.split(/\s+/).filter((name) => name && !name.includes(':'));
+}
+
 describe('WeekPodium', () => {
   it('shows the leading three and leaves the rest to the table', () => {
     render(
@@ -60,6 +71,10 @@ describe('WeekPodium', () => {
     );
 
     expect(cards()).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'ADA' })).toHaveAttribute(
+      'href',
+      'https://github.com/ada',
+    );
     expect(screen.queryByRole('link', { name: 'DEE' })).not.toBeInTheDocument();
   });
 
@@ -113,14 +128,47 @@ describe('WeekPodium', () => {
     expect(avatar('cy')).toContain('sm:size-12');
   });
 
-  it('gives every tied leader the same emphasis, not just the first of them', () => {
+  it('keeps the lead avatar on every tied leader, not just the first of them', () => {
     render(<WeekPodium standings={[standing('ada', 9), standing('bob', 9), standing('cy', 4)]} />);
 
     const avatar = (login: string) => card(login).querySelector('img')!.className;
 
-    expect(avatar('ada')).toContain('size-11');
-    expect(avatar('bob')).toContain('size-11');
-    expect(avatar('cy')).toContain('size-9');
+    expect(avatar('ada')).toContain('sm:size-11');
+    expect(avatar('bob')).toContain('sm:size-11');
+    expect(avatar('cy')).not.toContain('sm:size-11');
+  });
+
+  it('reads the leading card at the size of the others on a narrow screen', () => {
+    render(<WeekPodium standings={[standing('ada', 9), standing('bob', 6), standing('cy', 4)]} />);
+
+    expect(unprefixed(card('ada'))).toEqual(unprefixed(card('bob')));
+    expect(unprefixed(card('ada').querySelector('img')!)).toEqual(
+      unprefixed(card('bob').querySelector('img')!),
+    );
+    expect(unprefixed(screen.getByRole('link', { name: 'ADA' }))).toEqual(
+      unprefixed(screen.getByRole('link', { name: 'BOB' })),
+    );
+  });
+
+  it('prints the weekly points the table prints, to the same two decimals', () => {
+    render(<WeekPodium standings={[standing('ada', 9.125), standing('bob', 6)]} />);
+
+    expect(score('ada')).toHaveTextContent('9.13');
+    expect(score('bob')).toHaveTextContent('6.00');
+  });
+
+  it('names each category in a tooltip, and leaves the reader-only label in place', () => {
+    render(<WeekPodium standings={[standing('ada', 9)]} />);
+
+    const figures = within(card('ada')).getAllByRole('listitem');
+
+    expect(figures.map((li) => li.getAttribute('title'))).toEqual([
+      'pull requests',
+      'reviews',
+      'issues',
+      'commits',
+    ]);
+    expect(within(card('ada')).getByText('pull requests')).toHaveClass('sr-only');
   });
 
   it('drops the stepped shape when a tie reaches the podium', () => {
@@ -209,10 +257,20 @@ describe('MonthPodium', () => {
     expect(within(card('cy')).getByText('980')).toBeInTheDocument();
   });
 
+  it('prints its rating larger than the week prints its points', () => {
+    const month = render(<MonthPodium ranked={[entry('ada', 1042.6)]} />);
+    const week = render(<WeekPodium standings={[standing('ada', 9)]} />);
+
+    const size = (view: typeof month) => view.container.querySelector('[data-score]')!.className;
+
+    expect(size(month)).toContain('sm:text-xl');
+    expect(size(week)).not.toContain('sm:text-xl');
+  });
+
   it('carries no category figures', () => {
     render(<MonthPodium ranked={[entry('ada', 1042.6)]} />);
 
-    expect(within(card('ada')).queryAllByRole('listitem')).toHaveLength(0);
+    expect(card('ada').querySelector('ul')).toBeNull();
   });
 
   it('steps the podium, since the ladder cannot tie', () => {
