@@ -131,7 +131,11 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
                 </span>
               </div>
               <WeekPodium standings={board.week.standings} />
-              <WeekStandings standings={board.week.standings} />
+
+              <section class="space-y-3 pt-4">
+                <h3 class="text-center font-display text-lg">Weekly leaderboard</h3>
+                <WeekStandings standings={board.week.standings} />
+              </section>
             </div>
           )}
 
@@ -145,7 +149,11 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
                 </p>
               </div>
               <MonthPodium ranked={board.month.ranked} />
-              <MonthLadder month={board.month} />
+
+              <section class="space-y-3 pt-4">
+                <h3 class="text-center font-display text-lg">Monthly ladder</h3>
+                <MonthLadder month={board.month} />
+              </section>
             </div>
           )}
         </div>
