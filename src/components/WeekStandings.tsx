@@ -1,5 +1,9 @@
+import type { Award, BadgeKind } from '../lib/badges';
 import type { Standing } from '../lib/board';
 import { competitionPlaces } from '../lib/podium';
+import { Badge } from './Badges';
+
+const NO_BADGES: Award[] = [];
 
 function delta(value: number): string {
   return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`;
@@ -16,7 +20,13 @@ function deltaColor(value: number): string {
  * The round's table. Server-rendered like `Leaderboard`, and a React component for
  * the same reason: sorting is a `client:load` away rather than a rewrite.
  */
-export function WeekStandings({ standings }: { standings: Standing[] }) {
+export function WeekStandings({
+  standings,
+  badges = NO_BADGES,
+}: {
+  standings: Standing[];
+  badges?: Award[];
+}) {
   if (standings.length === 0) {
     return <p className="text-muted">Nobody has been active in this round yet.</p>;
   }
@@ -24,6 +34,8 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
   // The podium derives its places the same way from the same points, so the two cannot
   // disagree. `Standing.place` stays the midrank the rating is scored on.
   const places = competitionPlaces(standings.map((member) => member.points));
+  // At most one each, since a badge is never awarded twice in a round.
+  const held = new Map<string, BadgeKind>(badges.map((award) => [award.login, award.kind]));
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-line-soft raised px-4 py-1">
@@ -45,12 +57,15 @@ export function WeekStandings({ standings }: { standings: Standing[] }) {
             <tr key={member.login} className="border-b border-line-soft last:border-0">
               <td className="py-2 pr-4 text-muted">{places[index]}</td>
               <td className="py-2 pr-4">
-                <a
-                  href={`https://github.com/${member.login}`}
-                  className="transition-colors duration-150 hover:text-ember hover:underline"
-                >
-                  {member.name ?? member.login}
-                </a>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <a
+                    href={`https://github.com/${member.login}`}
+                    className="transition-colors duration-150 hover:text-ember hover:underline"
+                  >
+                    {member.name ?? member.login}
+                  </a>
+                  {held.has(member.login) && <Badge kind={held.get(member.login)!} />}
+                </span>
               </td>
               <td className="py-2 pr-4 text-right">{member.pullRequests}</td>
               <td className="py-2 pr-4 text-right">{member.reviews}</td>

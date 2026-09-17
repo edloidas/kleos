@@ -26,16 +26,18 @@ export type Category = (typeof CATEGORIES)[number];
 export type ScoredMember = Contributions & { score: number };
 
 /**
- * `weight × n / (n + k)` per category. Saturating rather than linear, so the
+ * `weight × n / (n + k)` for one category. Saturating rather than linear, so the
  * first contribution in a category is worth far more than the fiftieth: a
  * category approaches its weight and never exceeds it.
  */
-export function score(c: Contributions): number {
-  return CATEGORIES.reduce((total, category) => {
-    const n = c[category];
+export function contribution(c: Contributions, category: Category): number {
+  const n = c[category];
 
-    return total + (WEIGHTS[category] * n) / (n + HALF_AT[category]);
-  }, 0);
+  return (WEIGHTS[category] * n) / (n + HALF_AT[category]);
+}
+
+export function score(c: Contributions): number {
+  return CATEGORIES.reduce((total, category) => total + contribution(c, category), 0);
 }
 
 export function rank(members: Contributions[]): ScoredMember[] {

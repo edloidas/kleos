@@ -91,6 +91,47 @@ describe('getBoard week resolution', () => {
   });
 });
 
+describe('getBoard badges', () => {
+  it('awards the live week its badges', async () => {
+    fixtureWeeks.value = {
+      '2026-W38': [
+        member('ada', { pullRequests: 4, reviews: 1 }),
+        member('bob', { pullRequests: 1, commits: 6 }),
+      ],
+    };
+
+    const board = await getBoard(null, 'acme', NOW);
+
+    expect(board.week.badges).toEqual([
+      { kind: 'pullRequests', login: 'ada' },
+      { kind: 'commits', login: 'bob' },
+    ]);
+  });
+
+  // W36 opens September's season, so it has no round behind it. W35 is August's, and
+  // reaching it would rate a member against a week this view never shows — bob would
+  // take a riser for a climb that happened in another season.
+  it('never measures a riser against a round outside the week season', async () => {
+    fixtureWeeks.value = {
+      '2026-W35': [
+        member('ada', { pullRequests: 20 }),
+        member('bob', { pullRequests: 1 }),
+        member('cas', { pullRequests: 1 }),
+      ],
+      '2026-W36': [
+        member('ada', { pullRequests: 20 }),
+        member('bob', { pullRequests: 9 }),
+        member('cas', { pullRequests: 1 }),
+      ],
+    };
+
+    const board = await getBoard(null, 'acme', new Date('2026-09-01T09:00:00.000Z'));
+
+    expect(board.week.id).toBe('2026-W36');
+    expect(board.week.badges).toEqual([{ kind: 'pullRequests', login: 'ada' }]);
+  });
+});
+
 describe('getBoard standings', () => {
   // An earlier round with the placings reversed: a standings row that read the
   // member's first result instead of this week's would show bob ahead.
