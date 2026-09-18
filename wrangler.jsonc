@@ -11,7 +11,10 @@
   },
   "vars": {
     // Organizations the leaderboard is enabled for. Anything else lands on the waitlist.
-    "SUPPORTED_ORGS": "enonic,enonic-playground"
+    "SUPPORTED_ORGS": "enonic,anomalyco,enonic-playground,biomejs,denoland,oven-sh,pnpm,prettier,sveltejs,tanstack,vitejs,withastro,zed-industries",
+    // The few the front page offers as links. Outside this list an organization is
+    // reachable only by name; anything not also in SUPPORTED_ORGS is ignored.
+    "FEATURED_ORGS": "enonic,anomalyco,pnpm,oven-sh"
   },
   "kv_namespaces": [
     {

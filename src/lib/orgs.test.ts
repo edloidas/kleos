@@ -6,10 +6,11 @@ const env = vi.hoisted(() => ({}) as Record<string, string | undefined>);
 
 vi.mock('cloudflare:workers', () => ({ env }));
 
-const { excludedLogins, isSupported, supportedOrgs } = await import('./orgs');
+const { excludedLogins, featuredOrgs, isSupported, supportedOrgs } = await import('./orgs');
 
 beforeEach(() => {
   delete env.SUPPORTED_ORGS;
+  delete env.FEATURED_ORGS;
   delete env.EXCLUDED_LOGINS;
 });
 
@@ -30,6 +31,28 @@ describe('supportedOrgs', () => {
 
     expect(isSupported('Enonic')).toBe(true);
     expect(isSupported('acme')).toBe(false);
+  });
+});
+
+describe('featuredOrgs', () => {
+  it('keeps the configured order rather than the supported one', () => {
+    env.SUPPORTED_ORGS = 'enonic,anomalyco,pnpm';
+    env.FEATURED_ORGS = ' Pnpm , enonic ';
+
+    expect(featuredOrgs()).toEqual(['pnpm', 'enonic']);
+  });
+
+  it('drops a name the supported list does not carry', () => {
+    env.SUPPORTED_ORGS = 'enonic';
+    env.FEATURED_ORGS = 'enonic,acme';
+
+    expect(featuredOrgs()).toEqual(['enonic']);
+  });
+
+  it('features nothing when the variable is unset', () => {
+    env.SUPPORTED_ORGS = 'enonic';
+
+    expect(featuredOrgs()).toEqual([]);
   });
 });
 
