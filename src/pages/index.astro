@@ -1,9 +1,9 @@
 ---
 import Mark from '../components/Mark.astro';
 import Base from '../layouts/Base.astro';
-import { supportedOrgs } from '../lib/orgs';
+import { featuredOrgs } from '../lib/orgs';
 
-const orgs = supportedOrgs();
+const orgs = featuredOrgs();
 
 // The form submits here with ?org=; redirecting server-side means the lookup
 // works with scripting disabled, and the inline script below is only a shortcut.
