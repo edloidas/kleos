@@ -43,7 +43,7 @@ export type WeekView = {
   complete: boolean;
   standings: Standing[];
   badges: Award[];
-  /** The badge holders the podium does not show, as the spotlight row prints them. */
+  /** The round's badge holders, podium-last, as the spotlight row prints them. */
   spotlight: Highlight[];
 };
 

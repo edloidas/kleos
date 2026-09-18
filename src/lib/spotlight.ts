@@ -11,12 +11,12 @@ export type Highlight = {
 };
 
 /**
- * The round's badge holders the podium does not already show.
+ * The round's badge holders, the ones the podium already crowns ranked last.
  *
- * The podium crowns the leading three on points and a badge usually lands on one of
- * them, so repeating those cards a few rows down would name the same people twice and
- * add nothing. What is left is the whole point of the row: the members the ladder
- * passes over. Award order is kept — `awardBadges` has already ordered it.
+ * The members the ladder passes over are the point of the row, so they take the places
+ * first. A holder the podium shows is worth less here — the visitor has just read that
+ * name three cards up — but not nothing, and keeping them fills a row `awardBadges` has
+ * already capped. Award order holds inside each group; `awardBadges` set it.
  *
  * `standings` is the round as `weekView` holds it, sorted, and `awards` the badges it
  * produced from exactly that list, so every holder has a row to take a name and a face
@@ -26,11 +26,16 @@ export function spotlight(standings: Contributions[], awards: Award[]): Highligh
   const crowned = new Set(standings.slice(0, PODIUM_SIZE).map((member) => member.login));
   const named = new Map(standings.map((member) => [member.login, member]));
 
-  return awards.flatMap((award) => {
-    const member = crowned.has(award.login) ? undefined : named.get(award.login);
+  const cards = awards.flatMap((award) => {
+    const member = named.get(award.login);
 
     return member
       ? [{ kind: award.kind, login: member.login, name: member.name, avatarUrl: member.avatarUrl }]
       : [];
   });
+
+  return [
+    ...cards.filter((card) => !crowned.has(card.login)),
+    ...cards.filter((card) => crowned.has(card.login)),
+  ];
 }

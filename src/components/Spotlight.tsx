@@ -4,14 +4,14 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badges';
 
 /**
- * The badge holders the podium passes over, between it and the table. Static like the
- * podium and the badges in the table: it decorates data the table already carries, so
- * it hydrates nothing.
+ * The week's badge holders, between the podium and the table. Static like the podium
+ * and the badges in the table: it decorates data the table already carries, so it
+ * hydrates nothing.
  *
  * One card, two shapes, as the podium has: a row on narrow screens with the name, the
  * badge and its explanation stacked beside the face, a centred column on wider ones.
- * Smaller than a podium card at every width: it names the members the ladder did not
- * place.
+ * Smaller than a podium card at every width: the podium is the page's ranking, this row
+ * is a footnote to it.
  */
 
 /**
@@ -33,8 +33,7 @@ export function Spotlight({ highlights }: { highlights: Highlight[] }) {
   }
 
   return (
-    // Unordered: the badges are ordered by category weight, which is not a ranking of
-    // the people holding them.
+    // Unordered: the order is a priority for the places, not a ranking of the holders.
     <ul
       className={`mx-auto flex max-w-lg flex-col gap-2 sm:grid sm:gap-3 ${
         FRAME[highlights.length] ?? ''

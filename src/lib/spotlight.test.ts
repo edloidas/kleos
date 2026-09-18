@@ -30,16 +30,19 @@ function logins(standings: Contributions[], given: Award[]): string[] {
 }
 
 describe('spotlight', () => {
-  it('drops a holder the podium already shows', () => {
+  it('ranks a holder the podium already shows behind one it misses', () => {
     const standings = board('ada', 'bob', 'cy', 'dee');
 
-    expect(logins(standings, awards(['pullRequests', 'ada'], ['commits', 'dee']))).toEqual(['dee']);
+    expect(logins(standings, awards(['pullRequests', 'ada'], ['commits', 'dee']))).toEqual([
+      'dee',
+      'ada',
+    ]);
   });
 
-  it('keeps the fourth member, who is the first the podium misses', () => {
+  it('counts the third member as crowned, which is where the podium ends', () => {
     const standings = board('ada', 'bob', 'cy', 'dee');
 
-    expect(logins(standings, awards(['reviews', 'dee']))).toEqual(['dee']);
+    expect(logins(standings, awards(['reviews', 'cy'], ['commits', 'dee']))).toEqual(['dee', 'cy']);
   });
 
   it('keeps the order the badges were awarded in', () => {
@@ -49,31 +52,50 @@ describe('spotlight', () => {
     expect(logins(standings, given)).toEqual(['fay', 'dee', 'eve']);
   });
 
-  it('comes back empty when every badge landed on the podium', () => {
+  it('keeps the award order inside the crowned group too', () => {
+    const standings = board('ada', 'bob', 'cy', 'dee');
+    const given = awards(['pullRequests', 'bob'], ['reviews', 'dee'], ['commits', 'ada']);
+
+    expect(logins(standings, given)).toEqual(['dee', 'bob', 'ada']);
+  });
+
+  it('fills the row from the podium when every badge landed on it', () => {
     const standings = board('ada', 'bob', 'cy', 'dee');
 
-    expect(spotlight(standings, awards(['pullRequests', 'ada'], ['commits', 'bob']))).toEqual([]);
+    expect(logins(standings, awards(['pullRequests', 'ada'], ['commits', 'bob']))).toEqual([
+      'ada',
+      'bob',
+    ]);
   });
 
   it('comes back empty when no badge was awarded', () => {
     expect(spotlight(board('ada', 'bob'), [])).toEqual([]);
   });
 
-  it('shows nobody on a board the podium fits entirely', () => {
+  it('shows the whole board when the podium fits it entirely', () => {
     const standings = board('ada', 'bob');
 
-    expect(spotlight(standings, awards(['pullRequests', 'ada'], ['commits', 'bob']))).toEqual([]);
+    expect(logins(standings, awards(['pullRequests', 'ada'], ['commits', 'bob']))).toEqual([
+      'ada',
+      'bob',
+    ]);
   });
 
-  it('carries the name and face to print, from the standing itself', () => {
+  it('carries the award and the name and face to print it against', () => {
     const standings = board('ada', 'bob', 'cy', 'dee');
 
-    expect(spotlight(standings, awards(['commits', 'dee']))).toEqual([
+    expect(spotlight(standings, awards(['reviews', 'dee'], ['pullRequests', 'ada']))).toEqual([
       {
-        kind: 'commits',
+        kind: 'reviews',
         login: 'dee',
         name: 'DEE',
         avatarUrl: 'https://example.test/dee.png',
+      },
+      {
+        kind: 'pullRequests',
+        login: 'ada',
+        name: 'ADA',
+        avatarUrl: 'https://example.test/ada.png',
       },
     ]);
   });
