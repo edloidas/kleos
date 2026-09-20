@@ -7,7 +7,6 @@ import {
   isoWeekId,
   lastCompletedInstant,
   liveWeek,
-  nextUtcMidnight,
   seasonWeeks,
   weekRange,
   weekStart,
@@ -207,19 +206,5 @@ describe('fetchRange', () => {
     const evening = fetchRange('2026-W38', at('2026-09-16T23:59:59.999Z'));
 
     expect(morning).toEqual(evening);
-  });
-});
-
-describe('nextUtcMidnight', () => {
-  it('is the start of tomorrow', () => {
-    expect(nextUtcMidnight(at('2026-09-16T08:24:57.000Z')).toISOString()).toBe(
-      '2026-09-17T00:00:00.000Z',
-    );
-  });
-
-  it('crosses a month boundary', () => {
-    expect(nextUtcMidnight(at('2026-09-30T23:59:59.999Z')).toISOString()).toBe(
-      '2026-10-01T00:00:00.000Z',
-    );
   });
 });

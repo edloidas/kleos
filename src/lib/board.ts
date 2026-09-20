@@ -9,7 +9,7 @@ import type { SizeLimit } from './roster';
 import { RosterSizeError, sizeLimit } from './roster';
 import { score } from './score';
 import { loadSeason } from './season';
-import type { Season } from './season';
+import type { Season, SeasonLoad } from './season';
 import { loadSeasonFixture } from './source';
 import type { Highlight } from './spotlight';
 import { spotlight } from './spotlight';
@@ -20,6 +20,7 @@ import {
   lastCompletedInstant,
   liveWeek,
   seasonWeeks,
+  weekRange,
   weekStartOf,
   weekThursday,
 } from './weeks';
@@ -81,6 +82,15 @@ export type Board = {
   limit: SizeLimit | null;
   /** False when the season came from the snapshot rather than from GitHub. */
   live: boolean;
+  /** True when a round was served from a copy older than a fetch would have returned. */
+  stale: boolean;
+  /**
+   * How far the whole ladder can honestly claim to reach. The earliest cut among
+   * the rounds that fell back, rather than the latest: a refresh can land for one
+   * round and fail for another, and the later stamp would hide that gap behind the
+   * round that succeeded.
+   */
+  through: string;
 };
 
 /**
@@ -108,10 +118,12 @@ export async function getBoard(
   const weekWeeks = shared ? monthWeeks : roundsOf(weekSeason, now);
   const wanted = shared ? monthWeeks : [...monthWeeks, ...weekWeeks];
 
-  let rounds: Season;
+  let load: SeasonLoad;
 
   try {
-    rounds = viewer ? await loadSeason(viewer, org, wanted, now) : loadSeasonFixture(org, wanted);
+    load = viewer
+      ? await loadSeason(viewer, org, wanted, now)
+      : loadSeasonFixture(org, wanted, now);
   } catch (cause) {
     if (cause instanceof RosterSizeError) {
       return refused(org, week, month, cause, now);
@@ -119,6 +131,8 @@ export async function getBoard(
 
     throw cause;
   }
+
+  let rounds: Season = load.rounds;
 
   // Ahead of the ladder, the identities and the member count, so an excluded
   // member leaves no trace in any of them.
@@ -136,7 +150,7 @@ export async function getBoard(
 
   return {
     org,
-    week: weekView(week, rounds, weekTable, now, weekWeeks),
+    week: weekView(week, rounds, weekTable, now, weekWeeks, load.through),
     month: {
       start: month.toISOString(),
       rounds: roundsPlayed(table),
@@ -156,7 +170,45 @@ export async function getBoard(
     // to nobody was still counted, and is not an absent snapshot.
     limit: viewer || fetched > 0 ? servedLimit(fetched, members) : null,
     live: viewer !== null,
+    stale: load.stale.size > 0,
+    through: shortfall(load, now),
   };
+}
+
+/**
+ * Final when the copy reaches the end of its own week, not when the calendar has
+ * passed it. The two used to agree, because a round cut short of its week expired at
+ * the next midnight and could never be read afterwards; now one can be served days
+ * later, and calling it final would print "final" over a date that says otherwise.
+ *
+ * No stamp means no round was loaded at all, which only the refusal path produces.
+ */
+function settled(id: WeekId, through: Map<WeekId, string>, now: Date): boolean {
+  const cut = through.get(id);
+
+  return cut === undefined ? isComplete(id, now) : Date.parse(cut) >= Date.parse(weekRange(id).to);
+}
+
+/**
+ * How far the board can honestly claim to reach: the earliest cut among the rounds
+ * that fell back, or the last completed day when none did.
+ *
+ * Only the stale rounds are measured. A finished round is cut at the end of its own
+ * week by definition, so taking the earliest stamp across all of them would report
+ * the first round of the season — weeks ago — as the board's date every time.
+ */
+function shortfall(load: SeasonLoad, now: Date): string {
+  let earliest: string | null = null;
+
+  for (const week of load.stale) {
+    const cut = load.through.get(week);
+
+    if (cut !== undefined && (earliest === null || Date.parse(cut) < Date.parse(earliest))) {
+      earliest = cut;
+    }
+  }
+
+  return earliest ?? lastCompletedInstant(now).toISOString();
 }
 
 /**
@@ -228,7 +280,7 @@ function refused(org: string, week: WeekId, month: Date, cause: RosterSizeError,
 
   return {
     org,
-    week: weekView(week, new Map(), empty, now, []),
+    week: weekView(week, new Map(), empty, now, [], new Map()),
     month: {
       start: month.toISOString(),
       rounds: 0,
@@ -239,6 +291,8 @@ function refused(org: string, week: WeekId, month: Date, cause: RosterSizeError,
     members: cause.members,
     limit: cause.limit,
     live: true,
+    stale: false,
+    through: lastCompletedInstant(now).toISOString(),
   };
 }
 
@@ -288,7 +342,14 @@ function withIdentity(entry: LadderEntry, named: Map<string, Contributions>): La
  * from the season, the place and the delta from the rating that scored it, so the
  * two numbers on a row can never disagree.
  */
-function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date, weeks: WeekId[]): WeekView {
+function weekView(
+  id: WeekId,
+  rounds: Season,
+  table: Ladder,
+  now: Date,
+  weeks: WeekId[],
+  through: Map<WeekId, string>,
+): WeekView {
   const start = weekStartOf(id);
   const results = new Map(
     [...table.ranked, ...table.unranked].flatMap((entry) => {
@@ -327,8 +388,8 @@ function weekView(id: WeekId, rounds: Season, table: Ladder, now: Date, weeks: W
     number: Number(id.slice(-2)),
     from: start.toISOString(),
     to: new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-    through: lastCompletedInstant(now).toISOString(),
-    complete: isComplete(id, now),
+    through: through.get(id) ?? lastCompletedInstant(now).toISOString(),
+    complete: settled(id, through, now),
     standings,
     badges,
     spotlight: spotlight(standings, badges),

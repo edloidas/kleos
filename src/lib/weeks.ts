@@ -83,10 +83,6 @@ export function lastCompletedInstant(now: Date): Date {
   return new Date(utcMidnight(now).getTime() - 1);
 }
 
-export function nextUtcMidnight(now: Date): Date {
-  return new Date(utcMidnight(now).getTime() + DAY_MS);
-}
-
 /**
  * The round still being played. On a Monday the new week holds no completed day,
  * so this is still last week — which is the whole reason it is derived from the

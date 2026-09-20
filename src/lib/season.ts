@@ -1,10 +1,12 @@
+import type { Cached } from './cache';
 import { readWeek, writeWeek } from './cache';
+import { GitHubError } from './github/client';
 import type { Contributions, Roster } from './github/contributions';
 import { fetchCounts, fetchRoster } from './github/contributions';
 import type { Viewer } from './github/token';
 import { RosterSizeError, sizeLimit } from './roster';
 import type { WeekId } from './weeks';
-import { fetchRange, isComplete } from './weeks';
+import { fetchRange } from './weeks';
 
 /**
  * Weeks in flight at once. A request costs one GraphQL point whatever its window,
@@ -13,7 +15,24 @@ import { fetchRange, isComplete } from './weeks';
  */
 const MAX_IN_FLIGHT = 5;
 
+/** The one retry waits this long, plus up to as much again, so a burst re-spreads. */
+const RETRY_DELAY_MS = 300;
+
 export type Season = Map<WeekId, Contributions[]>;
+
+/**
+ * A loaded season: the rounds, the instant each one's counts were cut off at, and
+ * the rounds served from a copy older than a fetch now would have returned.
+ *
+ * The stamps ride beside `rounds` rather than inside it, so `ladder`,
+ * `withoutExcluded` and everything else downstream keep rating a plain
+ * `Map<WeekId, Contributions[]>` and never learn that a round can be stale.
+ */
+export type SeasonLoad = {
+  rounds: Season;
+  through: Map<WeekId, string>;
+  stale: Set<WeekId>;
+};
 
 /**
  * The named rounds, cached per week rather than per board: a completed week is
@@ -28,72 +47,166 @@ export async function loadSeason(
   org: string,
   weeks: WeekId[],
   now = new Date(),
-): Promise<Season> {
+): Promise<SeasonLoad> {
+  const rounds: Season = new Map();
+  const through = new Map<WeekId, string>();
+  const stale = new Set<WeekId>();
+
   if (weeks.length === 0) {
-    return new Map();
+    return { rounds, through, stale };
   }
 
-  const season: Season = new Map();
+  const cached = new Map<WeekId, Cached<Contributions[]>>();
 
   await Promise.all(
     weeks.map(async (week) => {
-      const counts = await read(org, week, viewer);
+      const entry = await read(org, week, viewer);
 
-      if (counts) {
-        season.set(week, counts);
+      if (entry) {
+        cached.set(week, entry);
       }
     }),
   );
 
-  const missing = weeks.filter((week) => !season.has(week));
+  const serve = (week: WeekId, counts: Contributions[], cut: string): void => {
+    rounds.set(week, counts);
+    through.set(week, cut);
+  };
 
-  if (missing.length > 0) {
-    const roster = await fetchRoster(viewer.token, org, true);
+  /** Falls the round back on whatever copy survived, and reports having one. */
+  const fallBack = (week: WeekId): boolean => {
+    const entry = cached.get(week);
+
+    if (!entry) {
+      return false;
+    }
+
+    serve(week, entry.counts, entry.through);
+    stale.add(week);
+
+    return true;
+  };
+
+  // A copy is current when it already reaches as far as a fetch now would. Judged
+  // against `fetchRange` and never against `isComplete`: a week that has ended by
+  // the calendar says nothing about how far the copy goes, so a copy cut on the
+  // Thursday would be adopted as that week's final word and held for the full term.
+  const wanted = weeks.filter((week) => {
+    const entry = cached.get(week);
+
+    if (!entry || Date.parse(entry.through) < Date.parse(fetchRange(week, now).to)) {
+      return true;
+    }
+
+    serve(week, entry.counts, entry.through);
+
+    return false;
+  });
+
+  if (wanted.length > 0) {
+    let found: Roster | null;
+
+    try {
+      found = await fetchRoster(viewer.token, org, true);
+    } catch (cause) {
+      // A roster that cannot be fetched only sinks the season when something still
+      // needs fetching with it. Every wanted round holding a copy means the board
+      // can be served from what it already had.
+      if (wanted.every(fallBack)) {
+        return ordered(weeks, rounds, through, stale);
+      }
+
+      throw cause;
+    }
 
     // Without a roster the uncached rounds cannot be fetched, and serving them as
     // empty beside the cached ones would not read as an outage — it would read as
     // a week nobody worked, which is a rating the ladder would then publish.
-    if (!roster) {
+    if (!found) {
       throw new Error(`No GitHub organization ${org}; cannot load its season.`);
     }
 
-    const limit = sizeLimit(roster.logins.length);
+    const limit = sizeLimit(found.logins.length);
 
     if (limit) {
-      throw new RosterSizeError(roster.logins.length, limit);
+      throw new RosterSizeError(found.logins.length, limit);
     }
 
-    await inFlight(missing, MAX_IN_FLIGHT, async (week) => {
-      season.set(week, await load(viewer, org, roster, week, now));
+    const roster = found;
+
+    await inFlight(wanted, MAX_IN_FLIGHT, async (week) => {
+      const range = fetchRange(week, now);
+
+      try {
+        const counts = await retrying(() => fetchCounts(viewer.token, roster, range));
+
+        serve(week, counts, range.to);
+
+        // Best-effort: data worth serving is worth serving even when KV is down. An
+        // empty week is a real result and still gets cached — a member simply did
+        // nothing that week.
+        try {
+          await writeWeek(org, week, viewer.scope, counts, range.to);
+        } catch {
+          // Left uncached; the next request pays for it again.
+        }
+      } catch (cause) {
+        // A round the season never had is the case the rule below was written for,
+        // and no copy is what makes it unrecoverable.
+        if (!fallBack(week)) {
+          throw cause;
+        }
+      }
     });
   }
 
-  // Rebuilt in round order: the fetched weeks landed in completion order.
-  return new Map(weeks.map((week) => [week, season.get(week)!]));
+  return ordered(weeks, rounds, through, stale);
 }
 
-async function load(
-  viewer: Viewer,
-  org: string,
-  roster: Roster,
-  week: WeekId,
-  now: Date,
-): Promise<Contributions[]> {
-  const counts = await fetchCounts(viewer.token, roster, fetchRange(week, now));
+/** Rebuilt in round order: the fetched weeks landed in completion order. */
+function ordered(
+  weeks: WeekId[],
+  rounds: Season,
+  through: Map<WeekId, string>,
+  stale: Set<WeekId>,
+): SeasonLoad {
+  return { rounds: new Map(weeks.map((week) => [week, rounds.get(week)!])), through, stale };
+}
 
-  // Best-effort: data worth serving is worth serving even when KV is down. An
-  // empty week is a real result and still gets cached — a member simply did
-  // nothing that week.
+/**
+ * One retry, for the failures a second attempt can actually clear. A refusal is not
+ * among them, and `rateLimited` is read before the status because `graphql` reports
+ * a spent budget as a synthetic 502 — retrying a refusal is what gets a token banned.
+ */
+async function retrying<T>(run: () => Promise<T>): Promise<T> {
   try {
-    await writeWeek(org, week, viewer.scope, counts, isComplete(week, now), now);
-  } catch {
-    // Left uncached; the next request pays for it again.
+    return await run();
+  } catch (cause) {
+    if (!worthRetrying(cause)) {
+      throw cause;
+    }
+
+    await new Promise((resume) => setTimeout(resume, RETRY_DELAY_MS * (1 + Math.random())));
+
+    return await run();
+  }
+}
+
+function worthRetrying(cause: unknown): boolean {
+  if (cause instanceof GitHubError) {
+    return !cause.rateLimited && cause.status >= 500;
   }
 
-  return counts;
+  // `AbortSignal.timeout` rejects with a `TimeoutError`, which never became a
+  // `GitHubError` because no response came back to build one from.
+  return cause instanceof Error && cause.name === 'TimeoutError';
 }
 
-async function read(org: string, week: WeekId, viewer: Viewer): Promise<Contributions[] | null> {
+async function read(
+  org: string,
+  week: WeekId,
+  viewer: Viewer,
+): Promise<Cached<Contributions[]> | null> {
   try {
     return await readWeek<Contributions[]>(org, week, viewer.scope);
   } catch {

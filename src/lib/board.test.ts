@@ -4,15 +4,21 @@ import type { Contributions } from './github/contributions';
 import type { Viewer } from './github/token';
 import { RosterSizeError } from './roster';
 import { loadSeason } from './season';
+import type { SeasonLoad } from './season';
+import { fetchRange } from './weeks';
 
 const fixtureWeeks = vi.hoisted(() => ({ value: {} as Record<string, Contributions[]> }));
 
-// `source.ts` statically imports the gitignored fixture, so the no-token path is
-// only testable by standing in for it. `season.ts` is mocked for the opposite
-// reason: it reaches for the KV binding, which the node project does not have.
-vi.mock('./source', () => ({
-  loadSeasonFixture: (_org: string, weeks: string[]) =>
-    new Map(weeks.map((week) => [week, fixtureWeeks.value[week] ?? []])),
+// The snapshot is what gets stood in for, not `source.ts`: the JSON is gitignored
+// and usually empty, and mocking the module instead would test `loadSeasonFixture`
+// against a reimplementation of itself. `season.ts` is mocked for a different
+// reason — it reaches for the KV binding, which the node project does not have.
+//
+// A getter, because each test reassigns the weeks after this module is evaluated.
+vi.mock('../fixtures/boards.json', () => ({
+  get default() {
+    return { orgs: { acme: { weeks: fixtureWeeks.value } } };
+  },
 }));
 
 vi.mock('./season', () => ({ loadSeason: vi.fn() }));
@@ -21,6 +27,15 @@ const { getBoard } = await import('./board');
 
 const VIEWER: Viewer = { token: 'test-token', scope: 'public' };
 const NOW = new Date('2026-09-16T09:00:00.000Z');
+
+/** Rounds as `loadSeason` hands them back when every one of them is current. */
+function loaded(rounds: Map<string, Contributions[]>, now = NOW): SeasonLoad {
+  return {
+    rounds,
+    through: new Map([...rounds.keys()].map((week) => [week, fetchRange(week, now).to])),
+    stale: new Set<string>(),
+  };
+}
 
 function member(login: string, counts: Partial<Contributions> = {}): Contributions {
   const zero = { commits: 0, pullRequests: 0, reviews: 0, issues: 0, restricted: 0 };
@@ -410,16 +425,18 @@ describe('getBoard last-round delta', () => {
 describe('getBoard with a token', () => {
   it('takes the season from GitHub and marks the board live', async () => {
     vi.mocked(loadSeason).mockResolvedValue(
-      new Map([
-        [
-          '2026-W38',
+      loaded(
+        new Map([
           [
-            member('ada', { pullRequests: 2 }),
-            member('bob', { commits: 1 }),
-            member('cas', { issues: 1 }),
+            '2026-W38',
+            [
+              member('ada', { pullRequests: 2 }),
+              member('bob', { commits: 1 }),
+              member('cas', { issues: 1 }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
 
     const board = await getBoard(VIEWER, 'acme', NOW);
@@ -427,6 +444,79 @@ describe('getBoard with a token', () => {
     expect(board.live).toBe(true);
     expect(board.members).toBe(3);
     expect(board.week.standings).toHaveLength(3);
+  });
+
+  // The three fields the stale path puts on the board, together: a round that fell
+  // back reports its own cut rather than the clock, the board reports the earliest
+  // of them, and a finished round's own week end is not mistaken for a shortfall.
+  it('reports how far a fallen-back board actually reaches', async () => {
+    const roster = [member('ada', { pullRequests: 2 }), member('bob', { commits: 1 })];
+
+    vi.mocked(loadSeason).mockResolvedValue({
+      rounds: new Map([
+        ['2026-W36', roster],
+        ['2026-W37', roster],
+        ['2026-W38', roster],
+      ]),
+      through: new Map([
+        // Cut at its own week end, which is what a finished round always reports.
+        ['2026-W36', '2026-09-06T23:59:59.999Z'],
+        ['2026-W37', '2026-09-10T23:59:59.999Z'],
+        ['2026-W38', '2026-09-14T23:59:59.999Z'],
+      ]),
+      stale: new Set(['2026-W37', '2026-W38']),
+    });
+
+    const board = await getBoard(VIEWER, 'acme', NOW);
+
+    expect(board.stale).toBe(true);
+    // The earlier of the two that fell back, not the later one and not W36's end.
+    expect(board.through).toBe('2026-09-10T23:59:59.999Z');
+    // The running week's own stamp; the clock would have said the 15th.
+    expect(board.week.through).toBe('2026-09-14T23:59:59.999Z');
+  });
+
+  // The calendar says week 38 finished on the 20th, but the copy stops on the 17th.
+  // Calling it final would print "final" directly above a date that contradicts it.
+  it('does not call a round final when its copy stops short of the week end', async () => {
+    const roster = [member('ada', { pullRequests: 2 }), member('bob', { commits: 1 })];
+
+    vi.mocked(loadSeason).mockResolvedValue({
+      rounds: new Map([['2026-W38', roster]]),
+      through: new Map([['2026-W38', '2026-09-17T23:59:59.999Z']]),
+      stale: new Set(['2026-W38']),
+    });
+
+    const board = await getBoard(VIEWER, 'acme', new Date('2026-09-21T09:00:00.000Z'));
+
+    expect(board.week.id).toBe('2026-W38');
+    expect(board.week.complete).toBe(false);
+    expect(board.week.through).toBe('2026-09-17T23:59:59.999Z');
+  });
+
+  it('calls a round final once its copy reaches the week end', async () => {
+    const roster = [member('ada', { pullRequests: 2 }), member('bob', { commits: 1 })];
+
+    vi.mocked(loadSeason).mockResolvedValue({
+      rounds: new Map([['2026-W38', roster]]),
+      through: new Map([['2026-W38', '2026-09-20T23:59:59.999Z']]),
+      stale: new Set(),
+    });
+
+    const board = await getBoard(VIEWER, 'acme', new Date('2026-09-21T09:00:00.000Z'));
+
+    expect(board.week.complete).toBe(true);
+  });
+
+  it('reports a board with nothing stale as reaching yesterday', async () => {
+    vi.mocked(loadSeason).mockResolvedValue(
+      loaded(new Map([['2026-W38', [member('ada', { pullRequests: 2 })]]])),
+    );
+
+    const board = await getBoard(VIEWER, 'acme', NOW);
+
+    expect(board.stale).toBe(false);
+    expect(board.through).toBe('2026-09-15T23:59:59.999Z');
   });
 
   it('refuses a roster the season rejected before fetching it', async () => {
@@ -450,7 +540,7 @@ describe('getBoard with a token', () => {
   // private: the roster comes back empty and a verdict is owed, unlike the
   // tokenless render where an empty season only means no snapshot on disk.
   it('rejects a live organization with no public members', async () => {
-    vi.mocked(loadSeason).mockResolvedValue(new Map([['2026-W38', []]]));
+    vi.mocked(loadSeason).mockResolvedValue(loaded(new Map([['2026-W38', []]])));
 
     const board = await getBoard(VIEWER, 'acme', NOW);
 
@@ -564,16 +654,18 @@ describe('getBoard exclusions', () => {
 
   it('excludes from a live season the same way as from the snapshot', async () => {
     vi.mocked(loadSeason).mockResolvedValue(
-      new Map([
-        [
-          '2026-W38',
+      loaded(
+        new Map([
           [
-            member('ada', { pullRequests: 2 }),
-            member('bob', { commits: 1 }),
-            member('cas', { issues: 1 }),
+            '2026-W38',
+            [
+              member('ada', { pullRequests: 2 }),
+              member('bob', { commits: 1 }),
+              member('cas', { issues: 1 }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
 
     const board = await getBoard(VIEWER, 'acme', NOW, ['bob']);
