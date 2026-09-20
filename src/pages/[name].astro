@@ -103,6 +103,14 @@ const monthName = new Intl.DateTimeFormat('en-GB', {
           {route.kind === 'not-enabled' && <Waitlist org={name} requested={requested} />}
           {error && <p class="text-muted">{error}</p>}
 
+          {board?.stale && (
+            <p class="mb-4 text-center text-sm text-muted">
+              kleos could not refresh from GitHub. These numbers run through {day.format(
+                new Date(board.through),
+              )}.
+            </p>
+          )}
+
           {board?.limit === 'too-small' && (
             <p class="text-muted">
               {name} has {board.members} public {board.members === 1 ? 'member' : 'members'}. A ladder
